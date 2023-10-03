@@ -1,0 +1,20 @@
+{
+	"name": "1-Create Source External Tables",
+	"properties": {
+		"folder": {
+			"name": "SQL Ingestion Script/Transformation of Data"
+		},
+		"content": {
+			"query": "\n\nUSE PATIENT_INFORMATION_SYSTEM\nGO\n\n--  BRONZE APPOINT DATA EXTERNAL TABLE\n    CREATE EXTERNAL TABLE PATIENT_INFORMATION_SYSTEM.BRONZE.AppointmentData (\n        PatientId VARCHAR(100),\n        [Name] VARCHAR(100), \n        [Location] VARCHAR(100),\n        HCP VARCHAR(100),\n        Status VARCHAR(50),\n        ReferralSource VARCHAR(100),\n        SubReferralSource VARCHAR(200),\n        ApptDate datetime2(0),\n        ApptType VARCHAR(100),\n        ME_ID BIGINT,\n        ME_FullName VARCHAR(100),\n        LastModifiedOn datetime2(0),\n        SycleExportDate datetime2(0),\n        SubReferralSourceCode VARCHAR(100),\n        FranchiseOwner VARCHAR(100)\n        )\n        WITH (\n        LOCATION = '/Raw/AppointmentData/*.csv',\n        DATA_SOURCE = PATIENT_INFORMATION_SYSTEM_SRC,\n        FILE_FORMAT = PATIENT_INFORMATION_SYSTEM_SRC_FORMAT\n        )\nGO\n\n\n\n-- BRONZE PATIENT DATA EXTERNAL TABLE\n\nCREATE EXTERNAL TABLE PATIENT_INFORMATION_SYSTEM.BRONZE.PatientData (\n    PatientsId\tVARCHAR(100)\t,\n    Franchise\tvarchar(200)\t,\n    ClinicDefault\tvarchar(200)\t,\n    Patient\tvarchar(200)\t,\n    Staff\tvarchar(200)\t,\n    PatientCategory\tvarchar(200)\t,\n    PatientArchive\tvarchar(200)\t,\n    ClinicArchive\tvarchar(200)\t,\n    Street1\tvarchar(200)\t,\n    Street2\tvarchar(200)\t,\n    City\tvarchar(200)\t,\n    State\tvarchar(200)\t,\n    ZipCode\tvarchar(200)\t,\n    Gender\tvarchar(200)\t,\n    DOB\tvarchar(200)\t,\n    HomePhone\tvarchar(200)\t,\n    CellPhone\tvarchar(200)\t,\n    WorkPhone\tvarchar(200)\t,\n    OtherPhone\tvarchar(200)\t,\n    Email\tvarchar(200)\t,\n    RefSourceName\tvarchar(200)\t,\n    PatientCreateDate\tdatetime2(0)\t,\n    LastApptDate\tdatetime2(0)\t,\n    LastPurchaseDate\tdatetime2(0)\t,\n    WarrantyDate\tvarchar(200)\t,\n    NextApptDate\tdatetime2(0)\t,\n    MailStatus\tvarchar(200)\t,\n    EmailStatus\tvarchar(200)\t,\n    CallStatus\tvarchar(200)\t,\n    HIPAASigned\tvarchar(200)\t,\n    TextStatus\tvarchar(200)\t,\n    PatientLastUpdateDate\tdatetime2(0)\t,\n    LastTestApptDate\tdatetime2(0)\t,\n    PatientLossLevel\tbigint\t,\n    ME_ID\tbigint\t,\n    ME_FullName\tvarchar(200)\t,\n    LastModifiedDate\tdatetime2(0)\t,\n    SycleExportDate\tdate\t,\n    FranchiseOwner\tvarchar(200)\t\n)\n\tWITH (\n\tLOCATION = '/Raw/PatientData/*.csv',\n\tDATA_SOURCE = PATIENT_INFORMATION_SYSTEM_SRC,\n\tFILE_FORMAT = PATIENT_INFORMATION_SYSTEM_SRC_FORMAT\n\t)\nGO\n\n-- BRONZE SALES DATA EXTERNAL TABLE\n\nCREATE EXTERNAL TABLE PATIENT_INFORMATION_SYSTEM.BRONZE.SalesData (\n    id\tbigint\t,\n    PurchaseDate\tdate\t,\n    DeliveryDate\tdate\t,\n    HCP\tvarchar(200)\t,\n    ReferralSource\tvarchar(200)\t,\n    SubReferralSource\tvarchar(200)\t,\n    Manufacturer\tvarchar(200)\t,\n    Model\tvarchar(200)\t,\n    SN\tvarchar(200)\t,\n    SalesType\tvarchar(200)\t,\n    ItemType\tvarchar(200)\t,\n    NetSales\tfloat\t,\n    NetUnits\tbigint\t,\n    CustomerIdName\tvarchar(200)\t,\n    Location\tvarchar(200)\t,\n    LastModifiedDate\tdatetime2(0)\t,\n    SycleExportDate\tdate\t,\n    SubReferralSourceCode\tvarchar(200)\t,\n    FranchiseOwner\tvarchar(200)\t\n    )\n\tWITH (\n\tLOCATION = '/Raw/SalesData/*.csv',\n\tDATA_SOURCE = PATIENT_INFORMATION_SYSTEM_SRC,\n\tFILE_FORMAT = PATIENT_INFORMATION_SYSTEM_SRC_FORMAT\n\t)\nGO\n\n\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "PATIENT_INFORMATION_SYSTEM",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

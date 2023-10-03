@@ -1,0 +1,98 @@
+{
+	"name": "ParquetSales",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorageBronze",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "Silver/SalesData",
+				"fileSystem": "azuresynapsebronze"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": [
+			{
+				"name": "id",
+				"type": "UTF8"
+			},
+			{
+				"name": "PurchaseDate",
+				"type": "INT96"
+			},
+			{
+				"name": "DeliveryDate",
+				"type": "INT96"
+			},
+			{
+				"name": "HCP",
+				"type": "UTF8"
+			},
+			{
+				"name": "ReferralSource",
+				"type": "UTF8"
+			},
+			{
+				"name": "SubReferralSource",
+				"type": "UTF8"
+			},
+			{
+				"name": "Manufacturer",
+				"type": "UTF8"
+			},
+			{
+				"name": "Model",
+				"type": "UTF8"
+			},
+			{
+				"name": "SN",
+				"type": "UTF8"
+			},
+			{
+				"name": "SalesType",
+				"type": "UTF8"
+			},
+			{
+				"name": "ItemType",
+				"type": "UTF8"
+			},
+			{
+				"name": "NetSales",
+				"type": "UTF8"
+			},
+			{
+				"name": "NetUnits",
+				"type": "UTF8"
+			},
+			{
+				"name": "CustomerIdName",
+				"type": "UTF8"
+			},
+			{
+				"name": "Location",
+				"type": "UTF8"
+			},
+			{
+				"name": "LastModifiedDate",
+				"type": "INT96"
+			},
+			{
+				"name": "SycleExportDate",
+				"type": "INT96"
+			},
+			{
+				"name": "SubReferralSourceCode",
+				"type": "UTF8"
+			},
+			{
+				"name": "FranchiseOwner",
+				"type": "UTF8"
+			}
+		]
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

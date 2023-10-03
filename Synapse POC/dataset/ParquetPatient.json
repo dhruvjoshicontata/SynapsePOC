@@ -1,0 +1,178 @@
+{
+	"name": "ParquetPatient",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorageBronze",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "Silver/PatientData",
+				"fileSystem": "azuresynapsebronze"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": [
+			{
+				"name": "PatientsId",
+				"type": "UTF8"
+			},
+			{
+				"name": "Franchise",
+				"type": "UTF8"
+			},
+			{
+				"name": "ClinicDefault",
+				"type": "UTF8"
+			},
+			{
+				"name": "Patient",
+				"type": "UTF8"
+			},
+			{
+				"name": "Staff",
+				"type": "UTF8"
+			},
+			{
+				"name": "PatientCategory",
+				"type": "UTF8"
+			},
+			{
+				"name": "PatientArchive",
+				"type": "UTF8"
+			},
+			{
+				"name": "ClinicArchive",
+				"type": "UTF8"
+			},
+			{
+				"name": "Street1",
+				"type": "UTF8"
+			},
+			{
+				"name": "Street2",
+				"type": "UTF8"
+			},
+			{
+				"name": "City",
+				"type": "UTF8"
+			},
+			{
+				"name": "State",
+				"type": "UTF8"
+			},
+			{
+				"name": "ZipCode",
+				"type": "UTF8"
+			},
+			{
+				"name": "Gender",
+				"type": "UTF8"
+			},
+			{
+				"name": "DOB",
+				"type": "UTF8"
+			},
+			{
+				"name": "HomePhone",
+				"type": "UTF8"
+			},
+			{
+				"name": "CellPhone",
+				"type": "UTF8"
+			},
+			{
+				"name": "WorkPhone",
+				"type": "UTF8"
+			},
+			{
+				"name": "OtherPhone",
+				"type": "UTF8"
+			},
+			{
+				"name": "Email",
+				"type": "UTF8"
+			},
+			{
+				"name": "RefSourceName",
+				"type": "UTF8"
+			},
+			{
+				"name": "PatientCreateDate",
+				"type": "UTF8"
+			},
+			{
+				"name": "LastApptDate",
+				"type": "UTF8"
+			},
+			{
+				"name": "LastPurchaseDate",
+				"type": "UTF8"
+			},
+			{
+				"name": "WarrantyDate",
+				"type": "UTF8"
+			},
+			{
+				"name": "NextApptDate",
+				"type": "UTF8"
+			},
+			{
+				"name": "MailStatus",
+				"type": "UTF8"
+			},
+			{
+				"name": "EmailStatus",
+				"type": "UTF8"
+			},
+			{
+				"name": "CallStatus",
+				"type": "UTF8"
+			},
+			{
+				"name": "HIPAASigned",
+				"type": "UTF8"
+			},
+			{
+				"name": "TextStatus",
+				"type": "UTF8"
+			},
+			{
+				"name": "PatientLastUpdateDate",
+				"type": "UTF8"
+			},
+			{
+				"name": "LastTestApptDate",
+				"type": "UTF8"
+			},
+			{
+				"name": "PatientLossLevel",
+				"type": "UTF8"
+			},
+			{
+				"name": "ME_ID",
+				"type": "INT64"
+			},
+			{
+				"name": "ME_FullName",
+				"type": "UTF8"
+			},
+			{
+				"name": "LastModifiedDate",
+				"type": "INT96"
+			},
+			{
+				"name": "SycleExportDate",
+				"type": "INT96"
+			},
+			{
+				"name": "FranchiseOwner",
+				"type": "UTF8"
+			}
+		]
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

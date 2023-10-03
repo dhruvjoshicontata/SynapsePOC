@@ -1,0 +1,701 @@
+{
+	"name": "pl_Patient_Bronze_Silver",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Metadata Patient Data",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ParquetPatient",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "ParquetReadSettings"
+					}
+				}
+			},
+			{
+				"name": "ForEach1",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Metadata Patient Data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Metadata Patient Data').output.childItems",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Get Metadata1",
+							"type": "GetMetadata",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ParquetPatient",
+									"type": "DatasetReference"
+								},
+								"fieldList": [
+									"lastModified"
+								],
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "ParquetReadSettings"
+								}
+							}
+						},
+						{
+							"name": "If Condition1",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Get Metadata1",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(activity('Get Metadata1').output.lastModified, variables('maxTime'))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Set variable2",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "maxTime",
+											"value": {
+												"value": "@activity('Get Metadata1').output.lastModified",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Copy data1",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "ForEach1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('maxTime')",
+								"type": "Expression"
+							},
+							"wildcardFileName": "*.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "FlattenHierarchy"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "PatientsId",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "PatientsId",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "Franchise",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Franchise",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "ClinicDefault",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "ClinicDefault",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "Patient",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Patient",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "Staff",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Staff",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "PatientCategory",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "PatientCategory",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "PatientArchive",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "PatientArchive",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "ClinicArchive",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "ClinicArchive",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "Street1",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Street1",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "Street2",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Street2",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "City",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "City",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "State",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "State",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "ZipCode",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "ZipCode",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "Gender",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Gender",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "DOB",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "DOB",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "HomePhone",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "HomePhone",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "CellPhone",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "CellPhone",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "WorkPhone",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "WorkPhone",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "OtherPhone",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "OtherPhone",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "Email",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Email",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "RefSourceName",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "RefSourceName",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "PatientCreateDate",
+									"type": "DateTime",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "PatientCreateDate",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "LastApptDate",
+									"type": "DateTime",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "LastApptDate",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "LastPurchaseDate",
+									"type": "DateTime",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "LastPurchaseDate",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "WarrantyDate",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "WarrantyDate",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "NextApptDate",
+									"type": "DateTime",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "NextApptDate",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "MailStatus",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "MailStatus",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "EmailStatus",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "EmailStatus",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "CallStatus",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "CallStatus",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "HIPAASigned",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "HIPAASigned",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "TextStatus",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "TextStatus",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "PatientLastUpdateDate",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "PatientLastUpdateDate",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "LastTestApptDate",
+									"type": "DateTime",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "LastTestApptDate",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "PatientLossLevel",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "PatientLossLevel",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "ME_ID",
+									"type": "Int32",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "ME_ID",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "ME_FullName",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "ME_FullName",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "LastModifiedDate",
+									"type": "DateTime",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "LastModifiedDate",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "SycleExportDate",
+									"type": "DateTime",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "SycleExportDate",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "FranchiseOwner",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "FranchiseOwner",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "DelimitedTextPatient",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ParquetPatient",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Set variable1",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Copy data1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "finalTime",
+					"value": {
+						"value": "@variables('maxTime')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"maxTime": {
+				"type": "String",
+				"defaultValue": "2023-09-25"
+			},
+			"finalTime": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-09-27T10:33:56Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

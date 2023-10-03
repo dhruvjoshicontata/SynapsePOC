@@ -1,0 +1,20 @@
+{
+	"name": "2-SILVER_Cleansing_AND_Transformation",
+	"properties": {
+		"folder": {
+			"name": "SQL Ingestion Script/Transformation of Data"
+		},
+		"content": {
+			"query": "-- GENERATING SILVER TABLES IN PARQUET FORMAT\n-- CLEANSED THE DUPLICATE DATA \n-- TRANSFORMATION WITH NEW COLUMNS IN SalesData Table\n\n\nCREATE EXTERNAL TABLE PATIENT_INFORMATION_SYSTEM.SILVER.AppointmentData\n(\nPatientID\tvarchar(200)\t,\nName\tvarchar(200)\t,\nLocation\tvarchar(200)\t,\nHCP\tvarchar(200)\t,\nStatus\tvarchar(200)\t,\nReferralSource\tvarchar(200)\t,\nSubReferralSource\tvarchar(200)\t,\nApptDate\tdatetime2(7)\t,\nApptType\tvarchar(200)\t,\nME_ID\tbigint\t,\nME_FullName\tvarchar(200)\t,\nLastmodifiedOn\tdatetime2(7)\t,\nSycleExportDate\tdatetime2(7)\t,\nSubReferralSourceCode\tvarchar(200)\t,\nFranchiseOwner\tvarchar(200)\t\n)\n  WITH(\n  LOCATION = '/Silver/AppointmentData',\n\tDATA_SOURCE = PATIENT_INFORMATION_SYSTEM_SRC,\n\tFILE_FORMAT = PATIENT_INFORMATION_SYSTEM_SRC__PARQUET_FORMAT\n  )\n\nGO\n\nCREATE EXTERNAL TABLE PATIENT_INFORMATION_SYSTEM.SILVER.PatientData\n(\nPatientsId\tvarchar(200)\t,\nFranchise\tvarchar(200)\t,\nClinicDefault\tvarchar(200)\t,\nPatient\tvarchar(200)\t,\nStaff\tvarchar(200)\t,\nPatientCategory\tvarchar(200)\t,\nPatientArchive\tvarchar(200)\t,\nClinicArchive\tvarchar(200)\t,\nStreet1\tvarchar(200)\t,\nStreet2\tvarchar(200)\t,\nCity\tvarchar(200)\t,\nState\tvarchar(200)\t,\nZipCode\tvarchar(200)\t,\nGender\tvarchar(200)\t,\nDOB\tvarchar(200)\t,\nHomePhone\tvarchar(200)\t,\nCellPhone\tvarchar(200)\t,\nWorkPhone\tvarchar(200)\t,\nOtherPhone\tvarchar(200)\t,\nEmail\tvarchar(200)\t,\nRefSourceName\tvarchar(200)\t,\nPatientCreateDate\tvarchar(200)\t,\nLastApptDate\tvarchar(200)\t,\nLastPurchaseDate\tvarchar(200)\t,\nWarrantyDate\tvarchar(200)\t,\nNextApptDate\tvarchar(200)\t,\nMailStatus\tvarchar(200)\t,\nEmailStatus\tvarchar(200)\t,\nCallStatus\tvarchar(200)\t,\nHIPAASigned\tvarchar(200)\t,\nTextStatus\tvarchar(200)\t,\nPatientLastUpdateDate\tvarchar(200)\t,\nLastTestApptDate\tvarchar(200)\t,\nPatientLossLevel\tvarchar(200)\t,\nME_ID\tbigint\t,\nME_FullName\tvarchar(200)\t,\nLastModifiedDate\tdatetime2(7)\t,\nSycleExportDate\tdatetime2(7)\t,\nFranchiseOwner\tvarchar(200)\t\n)\n  WITH(\n    LOCATION = '/Silver/PatientData',\n\tDATA_SOURCE = PATIENT_INFORMATION_SYSTEM_SRC,\n\tFILE_FORMAT = PATIENT_INFORMATION_SYSTEM_SRC__PARQUET_FORMAT\n  )\n  \nGO\n\nCREATE EXTERNAL TABLE PATIENT_INFORMATION_SYSTEM.SILVER.SalesData\n(\n  id\tvarchar(200)\t,\n  PurchaseDate\tdatetime2(7)\t,\n  DeliveryDate\tdatetime2(7)\t,\n  HCP\tvarchar(200)\t,\n  ReferralSource\tvarchar(200)\t,\n  SubReferralSource\tvarchar(200)\t,\n  Manufacturer\tvarchar(200)\t,\n  Model\tvarchar(200)\t,\n  SN\tvarchar(200)\t,\n  SalesType\tvarchar(200)\t,\n  ItemType\tvarchar(200)\t,\n  NetSales\tvarchar(200)\t,\n  NetUnits\tvarchar(200)\t,\n  CustomerIdName\tvarchar(200)\t,\n  Location\tvarchar(200)\t,\n  LastModifiedDate\tdatetime2(7)\t,\n  SycleExportDate\tdatetime2(7)\t,\n  SubReferralSourceCode\tvarchar(200)\t,\n  FranchiseOwner\tvarchar(200)\t\n)\n  WITH(\n  LOCATION = '/Silver/SalesData',\n\tDATA_SOURCE = PATIENT_INFORMATION_SYSTEM_SRC,\n\tFILE_FORMAT = PATIENT_INFORMATION_SYSTEM_SRC__PARQUET_FORMAT\n  )\n\nSELECT top 100 * FROM PATIENT_INFORMATION_SYSTEM.SILVER.PatientData\n\n\n\n\n\n\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "PATIENT_INFORMATION_SYSTEM",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

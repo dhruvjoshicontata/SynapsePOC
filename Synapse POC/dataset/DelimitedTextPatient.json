@@ -1,0 +1,182 @@
+{
+	"name": "DelimitedTextPatient",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorageBronze",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "PatientData23.csv",
+				"folderPath": "Raw/PatientData",
+				"fileSystem": "azuresynapsebronze"
+			},
+			"columnDelimiter": "|",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "PatientsId",
+				"type": "String"
+			},
+			{
+				"name": "Franchise",
+				"type": "String"
+			},
+			{
+				"name": "ClinicDefault",
+				"type": "String"
+			},
+			{
+				"name": "Patient",
+				"type": "String"
+			},
+			{
+				"name": "Staff",
+				"type": "String"
+			},
+			{
+				"name": "PatientCategory",
+				"type": "String"
+			},
+			{
+				"name": "PatientArchive",
+				"type": "String"
+			},
+			{
+				"name": "ClinicArchive",
+				"type": "String"
+			},
+			{
+				"name": "Street1",
+				"type": "String"
+			},
+			{
+				"name": "Street2",
+				"type": "String"
+			},
+			{
+				"name": "City",
+				"type": "String"
+			},
+			{
+				"name": "State",
+				"type": "String"
+			},
+			{
+				"name": "ZipCode",
+				"type": "String"
+			},
+			{
+				"name": "Gender",
+				"type": "String"
+			},
+			{
+				"name": "DOB",
+				"type": "String"
+			},
+			{
+				"name": "HomePhone",
+				"type": "String"
+			},
+			{
+				"name": "CellPhone",
+				"type": "String"
+			},
+			{
+				"name": "WorkPhone",
+				"type": "String"
+			},
+			{
+				"name": "OtherPhone",
+				"type": "String"
+			},
+			{
+				"name": "Email",
+				"type": "String"
+			},
+			{
+				"name": "RefSourceName",
+				"type": "String"
+			},
+			{
+				"name": "PatientCreateDate",
+				"type": "String"
+			},
+			{
+				"name": "LastApptDate",
+				"type": "String"
+			},
+			{
+				"name": "LastPurchaseDate",
+				"type": "String"
+			},
+			{
+				"name": "WarrantyDate",
+				"type": "String"
+			},
+			{
+				"name": "NextApptDate",
+				"type": "String"
+			},
+			{
+				"name": "MailStatus",
+				"type": "String"
+			},
+			{
+				"name": "EmailStatus",
+				"type": "String"
+			},
+			{
+				"name": "CallStatus",
+				"type": "String"
+			},
+			{
+				"name": "HIPAASigned",
+				"type": "String"
+			},
+			{
+				"name": "TextStatus",
+				"type": "String"
+			},
+			{
+				"name": "PatientLastUpdateDate",
+				"type": "String"
+			},
+			{
+				"name": "LastTestApptDate",
+				"type": "String"
+			},
+			{
+				"name": "PatientLossLevel",
+				"type": "String"
+			},
+			{
+				"name": "ME_ID",
+				"type": "String"
+			},
+			{
+				"name": "ME_FullName",
+				"type": "String"
+			},
+			{
+				"name": "LastModifiedDate",
+				"type": "String"
+			},
+			{
+				"name": "SycleExportDate",
+				"type": "String"
+			},
+			{
+				"name": "FranchiseOwner",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

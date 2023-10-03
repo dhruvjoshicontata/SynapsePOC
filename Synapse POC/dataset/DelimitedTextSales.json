@@ -1,0 +1,102 @@
+{
+	"name": "DelimitedTextSales",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorageBronze",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "SalesData23.csv",
+				"folderPath": "Raw/SalesData",
+				"fileSystem": "azuresynapsebronze"
+			},
+			"columnDelimiter": "|",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "id",
+				"type": "String"
+			},
+			{
+				"name": "PurchaseDate",
+				"type": "String"
+			},
+			{
+				"name": "DeliveryDate",
+				"type": "String"
+			},
+			{
+				"name": "HCP",
+				"type": "String"
+			},
+			{
+				"name": "ReferralSource",
+				"type": "String"
+			},
+			{
+				"name": "SubReferralSource",
+				"type": "String"
+			},
+			{
+				"name": "Manufacturer",
+				"type": "String"
+			},
+			{
+				"name": "Model",
+				"type": "String"
+			},
+			{
+				"name": "SN",
+				"type": "String"
+			},
+			{
+				"name": "SalesType",
+				"type": "String"
+			},
+			{
+				"name": "ItemType",
+				"type": "String"
+			},
+			{
+				"name": "NetSales",
+				"type": "String"
+			},
+			{
+				"name": "NetUnits",
+				"type": "String"
+			},
+			{
+				"name": "CustomerIdName",
+				"type": "String"
+			},
+			{
+				"name": "Location",
+				"type": "String"
+			},
+			{
+				"name": "LastModifiedDate",
+				"type": "String"
+			},
+			{
+				"name": "SycleExportDate",
+				"type": "String"
+			},
+			{
+				"name": "SubReferralSourceCode",
+				"type": "String"
+			},
+			{
+				"name": "FranchiseOwner",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

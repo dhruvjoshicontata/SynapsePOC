@@ -1,0 +1,20 @@
+{
+	"name": "3-External File Format",
+	"properties": {
+		"folder": {
+			"name": "SQL Ingestion Script/Initial Setup Script"
+		},
+		"content": {
+			"query": "USE PATIENT_INFORMATION_SYSTEM\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'PATIENT_INFORMATION_SYSTEM_SRC_FORMAT') \n\tCREATE EXTERNAL FILE FORMAT PATIENT_INFORMATION_SYSTEM_SRC_FORMAT\n\tWITH ( FORMAT_TYPE = DELIMITEDTEXT,\n        FORMAT_OPTIONS \n        (\n              FIELD_TERMINATOR = '|',\n              STRING_DELIMITER='\"',\n              FIRST_ROW = 2,\n              USE_TYPE_DEFAULT = FALSE,\n              ENCODING = 'UTF8',\n              PARSER_VERSION = '2.0'\n\n        )\n    )\n\nIF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'PATIENT_INFORMATION_SYSTEM_SRC__PARQUET_FORMAT') \n\tCREATE EXTERNAL FILE FORMAT PATIENT_INFORMATION_SYSTEM_SRC__PARQUET_FORMAT\n\tWITH ( FORMAT_TYPE = PARQUET)\nGO",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "PATIENT_INFORMATION_SYSTEM",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

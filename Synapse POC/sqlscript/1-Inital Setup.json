@@ -1,0 +1,20 @@
+{
+	"name": "1-Inital Setup",
+	"properties": {
+		"folder": {
+			"name": "SQL Ingestion Script/Initial Setup Script"
+		},
+		"content": {
+			"query": "-- This is auto-generated code\n\nUSE MASTER \nGO\n\nCREATE DATABASE PATIENT_INFORMATION_SYSTEM\nGO\n\nALTER DATABASE PATIENT_INFORMATION_SYSTEM COLLATE Latin1_General_100_BIN2_UTF8 \nGO\n\n\nUSE PATIENT_INFORMATION_SYSTEM\nGO\n\n\nCREATE SCHEMA BRONZE;\nGO\n\nCREATE SCHEMA SILVER;\nGO\n\nCREATE SCHEMA GOLD;\nGO\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "PATIENT_INFORMATION_SYSTEM",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
