@@ -1,0 +1,29 @@
+{
+	"name": "demodatasetonacsvfile",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorageBronze",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "AppointmentData23.csv",
+				"folderPath": "Raw/AppointmentData",
+				"fileSystem": "azuresynapsebronze"
+			},
+			"columnDelimiter": "|",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "PatientID|Name|Location|HCP|Status|ReferralSource|SubReferralSource|ApptDate|ApptType|ME_ID|ME_FullName|LastmodifiedOn|SycleExportDate|SubReferralSourceCode|FranchiseOwner",
+				"type": "String"
+			}
+		]
+	}
+}
