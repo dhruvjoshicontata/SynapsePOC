@@ -30,15 +30,6 @@
 	},
 	"resources": [
 		{
-			"name": "[concat(parameters('workspaceName'), '/Spark1')]",
-			"type": "Microsoft.Synapse/workspaces/bigDataPools",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"annotations": []
-			},
-			"dependsOn": []
-		},
-		{
 			"name": "[concat(parameters('workspaceName'), '/pl_Appointment_Bronze_Silver')]",
 			"type": "Microsoft.Synapse/workspaces/pipelines",
 			"apiVersion": "2019-06-01-preview",
@@ -2665,7 +2656,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "8cdad33f-7751-4863-a3f7-5cf71c06b947"
+						"spark.autotune.trackingId": "9fc4734f-1f33-431e-a43a-566940292c96"
 					}
 				},
 				"metadata": {
@@ -2690,8 +2681,7 @@
 						"sparkVersion": "3.3",
 						"nodeCount": 10,
 						"cores": 4,
-						"memory": 28,
-						"automaticScaleJobs": false
+						"memory": 28
 					},
 					"sessionKeepAliveTimeout": 30
 				},
@@ -2729,7 +2719,7 @@
 							"warnings.filterwarnings('ignore')"
 						],
 						"outputs": [],
-						"execution_count": 23
+						"execution_count": 58
 					},
 					{
 						"cell_type": "code",
@@ -2756,7 +2746,7 @@
 							"df.head()"
 						],
 						"outputs": [],
-						"execution_count": 24
+						"execution_count": 59
 					},
 					{
 						"cell_type": "markdown",
@@ -2799,7 +2789,7 @@
 							"df.shape"
 						],
 						"outputs": [],
-						"execution_count": 25
+						"execution_count": 60
 					},
 					{
 						"cell_type": "code",
@@ -2826,7 +2816,26 @@
 							"df.info()"
 						],
 						"outputs": [],
-						"execution_count": 26
+						"execution_count": 61
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"df.describe()"
+						],
+						"outputs": [],
+						"execution_count": null
 					},
 					{
 						"cell_type": "markdown",
@@ -2869,7 +2878,7 @@
 							"df.nunique()"
 						],
 						"outputs": [],
-						"execution_count": 27
+						"execution_count": 62
 					},
 					{
 						"cell_type": "markdown",
@@ -2913,7 +2922,7 @@
 							"df.isna().any()"
 						],
 						"outputs": [],
-						"execution_count": 28
+						"execution_count": 63
 					},
 					{
 						"cell_type": "markdown",
@@ -2956,7 +2965,7 @@
 							"sns.heatmap(df.isnull())"
 						],
 						"outputs": [],
-						"execution_count": 29
+						"execution_count": 64
 					},
 					{
 						"cell_type": "code",
@@ -2984,7 +2993,7 @@
 							"df.head()"
 						],
 						"outputs": [],
-						"execution_count": 30
+						"execution_count": 65
 					},
 					{
 						"cell_type": "code",
@@ -3013,7 +3022,7 @@
 							"plt.show()"
 						],
 						"outputs": [],
-						"execution_count": 31
+						"execution_count": 66
 					},
 					{
 						"cell_type": "markdown",
@@ -3073,7 +3082,7 @@
 							"df.isna().any()"
 						],
 						"outputs": [],
-						"execution_count": 33
+						"execution_count": 67
 					},
 					{
 						"cell_type": "code",
@@ -3098,7 +3107,7 @@
 							"df.head()"
 						],
 						"outputs": [],
-						"execution_count": 34
+						"execution_count": 68
 					},
 					{
 						"cell_type": "code",
@@ -3125,7 +3134,7 @@
 							"df['Marital_Status'].value_counts()  "
 						],
 						"outputs": [],
-						"execution_count": 35
+						"execution_count": 69
 					},
 					{
 						"cell_type": "code",
@@ -3151,7 +3160,7 @@
 							"df['Marital_Status'] = df['Marital_Status'].replace(['Divorced', 'Widow', 'Alone', 'YOLO', 'Absurd'],'Single')"
 						],
 						"outputs": [],
-						"execution_count": 36
+						"execution_count": 70
 					},
 					{
 						"cell_type": "markdown",
@@ -3195,7 +3204,7 @@
 							"df['Marital_Status'].value_counts()  "
 						],
 						"outputs": [],
-						"execution_count": 37
+						"execution_count": 71
 					},
 					{
 						"cell_type": "code",
@@ -3225,7 +3234,7 @@
 							"df['NumTotalPurchases'] = df['NumWebPurchases'] + df['NumCatalogPurchases'] + df['NumStorePurchases'] + df['NumDealsPurchases']"
 						],
 						"outputs": [],
-						"execution_count": 38
+						"execution_count": 72
 					},
 					{
 						"cell_type": "code",
@@ -3254,7 +3263,7 @@
 							"df.head()"
 						],
 						"outputs": [],
-						"execution_count": 39
+						"execution_count": 73
 					},
 					{
 						"cell_type": "code",
@@ -3281,7 +3290,7 @@
 							"df['Age'] = 2015 - df[\"Year_Birth\"]"
 						],
 						"outputs": [],
-						"execution_count": 40
+						"execution_count": 74
 					},
 					{
 						"cell_type": "code",
@@ -3306,7 +3315,7 @@
 							"df['Education'].value_counts()"
 						],
 						"outputs": [],
-						"execution_count": 41
+						"execution_count": 75
 					},
 					{
 						"cell_type": "code",
@@ -3334,7 +3343,7 @@
 							"df['Education'] = df['Education'].replace(['Basic'], 'UG')"
 						],
 						"outputs": [],
-						"execution_count": 42
+						"execution_count": 76
 					},
 					{
 						"cell_type": "markdown",
@@ -3376,7 +3385,7 @@
 							"fig.show()"
 						],
 						"outputs": [],
-						"execution_count": 43
+						"execution_count": 77
 					},
 					{
 						"cell_type": "code",
@@ -3402,7 +3411,7 @@
 							"fig.show()"
 						],
 						"outputs": [],
-						"execution_count": 44
+						"execution_count": 78
 					},
 					{
 						"cell_type": "markdown",
@@ -3444,7 +3453,7 @@
 							"fig.show ()"
 						],
 						"outputs": [],
-						"execution_count": 45
+						"execution_count": 79
 					},
 					{
 						"cell_type": "code",
@@ -3470,7 +3479,7 @@
 							"fig.show ()"
 						],
 						"outputs": [],
-						"execution_count": 46
+						"execution_count": 80
 					},
 					{
 						"cell_type": "code",
@@ -3496,7 +3505,7 @@
 							"fig.show ()"
 						],
 						"outputs": [],
-						"execution_count": 47
+						"execution_count": 81
 					},
 					{
 						"cell_type": "code",
@@ -3522,7 +3531,7 @@
 							"fig.show ()"
 						],
 						"outputs": [],
-						"execution_count": 48
+						"execution_count": 82
 					},
 					{
 						"cell_type": "code",
@@ -3548,7 +3557,7 @@
 							"fig.show ()"
 						],
 						"outputs": [],
-						"execution_count": 49
+						"execution_count": 83
 					},
 					{
 						"cell_type": "markdown",
@@ -3590,7 +3599,7 @@
 							"fig.show ()"
 						],
 						"outputs": [],
-						"execution_count": 50
+						"execution_count": 84
 					},
 					{
 						"cell_type": "markdown",
@@ -3632,7 +3641,7 @@
 							"plt.title('Total Expense based on the Education Level');"
 						],
 						"outputs": [],
-						"execution_count": 51
+						"execution_count": 85
 					},
 					{
 						"cell_type": "code",
@@ -3658,7 +3667,7 @@
 							"plt.title('Total Income based on the Education Level');"
 						],
 						"outputs": [],
-						"execution_count": 52
+						"execution_count": 86
 					},
 					{
 						"cell_type": "code",
@@ -3680,10 +3689,10 @@
 							"tags": []
 						},
 						"source": [
-							"df.describe()"
+							""
 						],
 						"outputs": [],
-						"execution_count": 53
+						"execution_count": 87
 					}
 				]
 			},
@@ -3713,6 +3722,40 @@
 			},
 			"dependsOn": [],
 			"location": "eastus"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/demodatasetonacsvfile')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorageBronze",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "AppointmentData23.csv",
+						"folderPath": "Raw/AppointmentData",
+						"fileSystem": "azuresynapsebronze"
+					},
+					"columnDelimiter": "|",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "PatientID|Name|Location|HCP|Status|ReferralSource|SubReferralSource|ApptDate|ApptType|ME_ID|ME_FullName|LastmodifiedOn|SycleExportDate|SubReferralSourceCode|FranchiseOwner",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureDataLakeStorageBronze')]"
+			]
 		}
 	]
 }
