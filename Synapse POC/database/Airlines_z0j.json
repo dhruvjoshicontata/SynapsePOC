@@ -1,0 +1,24 @@
+{
+	"name": "Airlines_z0j",
+	"properties": {
+		"Name": "Airlines_z0j",
+		"EntityType": "DATABASE",
+		"Description": "",
+		"Origin": {
+			"Type": "SPARK"
+		},
+		"Properties": {
+			"DerivedModelDBInfo": "{\"ModelDirectives\":{\"BaseModel\":{\"Name\":\"Airlines\",\"Version\":\"1.3.0\"}}}",
+			"IsSyMSCDMDatabase": true
+		},
+		"Source": {
+			"Provider": "ADLS",
+			"Location": "abfss://azuresynapsebronze@azuresynapsecoe.dfs.core.windows.net/Airlines_z0j",
+			"Properties": {
+				"FormatType": "csv",
+				"LinkedServiceName": "azuresynapsecoe-WorkspaceDefaultStorage"
+			}
+		}
+	},
+	"type": "DATABASE"
+}

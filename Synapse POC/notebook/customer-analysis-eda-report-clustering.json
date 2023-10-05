@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "9fc4734f-1f33-431e-a43a-566940292c96"
+				"spark.autotune.trackingId": "2c603ee4-d404-4d4f-ae3f-4603aba4bc22"
 			}
 		},
 		"metadata": {
@@ -80,7 +80,7 @@
 					"import warnings\n",
 					"warnings.filterwarnings('ignore')"
 				],
-				"execution_count": 58
+				"execution_count": 63
 			},
 			{
 				"cell_type": "code",
@@ -106,7 +106,7 @@
 					"df = pd.read_csv(\"abfss://azuresynapsebronze@azuresynapsecoe.dfs.core.windows.net/Raw/EDA/marketing_campaign.csv\", sep=\"\\t\")\n",
 					"df.head()"
 				],
-				"execution_count": 59
+				"execution_count": 64
 			},
 			{
 				"cell_type": "markdown",
@@ -148,7 +148,7 @@
 					"\n",
 					"df.shape"
 				],
-				"execution_count": 60
+				"execution_count": 65
 			},
 			{
 				"cell_type": "code",
@@ -174,7 +174,7 @@
 					"\n",
 					"df.info()"
 				],
-				"execution_count": 61
+				"execution_count": 66
 			},
 			{
 				"cell_type": "code",
@@ -192,7 +192,7 @@
 				"source": [
 					"df.describe()"
 				],
-				"execution_count": null
+				"execution_count": 67
 			},
 			{
 				"cell_type": "markdown",
@@ -234,7 +234,7 @@
 					"\n",
 					"df.nunique()"
 				],
-				"execution_count": 62
+				"execution_count": 68
 			},
 			{
 				"cell_type": "markdown",
@@ -277,7 +277,7 @@
 					"\n",
 					"df.isna().any()"
 				],
-				"execution_count": 63
+				"execution_count": 69
 			},
 			{
 				"cell_type": "markdown",
@@ -319,7 +319,7 @@
 					"\n",
 					"sns.heatmap(df.isnull())"
 				],
-				"execution_count": 64
+				"execution_count": 70
 			},
 			{
 				"cell_type": "code",
@@ -346,7 +346,7 @@
 					"df=df.drop(columns=[\"Z_CostContact\", \"Z_Revenue\"],axis=1)\n",
 					"df.head()"
 				],
-				"execution_count": 65
+				"execution_count": 71
 			},
 			{
 				"cell_type": "code",
@@ -374,7 +374,7 @@
 					"sns.heatmap(df.corr(), annot=True)\n",
 					"plt.show()"
 				],
-				"execution_count": 66
+				"execution_count": 72
 			},
 			{
 				"cell_type": "markdown",
@@ -433,7 +433,7 @@
 					"df['Income'] = df['Income'].fillna(df['Income'].mean())\n",
 					"df.isna().any()"
 				],
-				"execution_count": 67
+				"execution_count": 73
 			},
 			{
 				"cell_type": "code",
@@ -457,7 +457,7 @@
 				"source": [
 					"df.head()"
 				],
-				"execution_count": 68
+				"execution_count": 74
 			},
 			{
 				"cell_type": "code",
@@ -483,7 +483,7 @@
 					"\n",
 					"df['Marital_Status'].value_counts()  "
 				],
-				"execution_count": 69
+				"execution_count": 75
 			},
 			{
 				"cell_type": "code",
@@ -508,7 +508,7 @@
 					"df['Marital_Status'] = df['Marital_Status'].replace(['Married', 'Together'],'relationship')\n",
 					"df['Marital_Status'] = df['Marital_Status'].replace(['Divorced', 'Widow', 'Alone', 'YOLO', 'Absurd'],'Single')"
 				],
-				"execution_count": 70
+				"execution_count": 76
 			},
 			{
 				"cell_type": "markdown",
@@ -551,7 +551,7 @@
 					"\n",
 					"df['Marital_Status'].value_counts()  "
 				],
-				"execution_count": 71
+				"execution_count": 77
 			},
 			{
 				"cell_type": "code",
@@ -580,7 +580,7 @@
 					"df['TotalAcceptedCmp'] = df['AcceptedCmp1'] + df['AcceptedCmp2'] + df['AcceptedCmp3'] + df['AcceptedCmp4'] + df['AcceptedCmp5'] + df['Response']\n",
 					"df['NumTotalPurchases'] = df['NumWebPurchases'] + df['NumCatalogPurchases'] + df['NumStorePurchases'] + df['NumDealsPurchases']"
 				],
-				"execution_count": 72
+				"execution_count": 78
 			},
 			{
 				"cell_type": "code",
@@ -608,7 +608,7 @@
 					"df=df.drop(columns=col_del,axis=1)\n",
 					"df.head()"
 				],
-				"execution_count": 73
+				"execution_count": 79
 			},
 			{
 				"cell_type": "code",
@@ -634,7 +634,7 @@
 					"\n",
 					"df['Age'] = 2015 - df[\"Year_Birth\"]"
 				],
-				"execution_count": 74
+				"execution_count": 80
 			},
 			{
 				"cell_type": "code",
@@ -658,7 +658,7 @@
 				"source": [
 					"df['Education'].value_counts()"
 				],
-				"execution_count": 75
+				"execution_count": 81
 			},
 			{
 				"cell_type": "code",
@@ -685,7 +685,7 @@
 					"df['Education'] = df['Education'].replace(['PhD','2n Cycle','Graduation', 'Master'],'PG')  \n",
 					"df['Education'] = df['Education'].replace(['Basic'], 'UG')"
 				],
-				"execution_count": 76
+				"execution_count": 82
 			},
 			{
 				"cell_type": "markdown",
@@ -726,7 +726,7 @@
 					"fig = px.bar(df, x='Marital_Status', y='Expenses', color=\"Education\")\n",
 					"fig.show()"
 				],
-				"execution_count": 77
+				"execution_count": 83
 			},
 			{
 				"cell_type": "code",
@@ -751,7 +751,7 @@
 					"fig = px.bar(df, x='Marital_Status', y='Expenses', color=\"Marital_Status\")\n",
 					"fig.show()"
 				],
-				"execution_count": 78
+				"execution_count": 84
 			},
 			{
 				"cell_type": "markdown",
@@ -792,7 +792,7 @@
 					"fig = px.histogram (df, x = \"Expenses\",  facet_row = \"Marital_Status\",  template = 'plotly_dark')\n",
 					"fig.show ()"
 				],
-				"execution_count": 79
+				"execution_count": 85
 			},
 			{
 				"cell_type": "code",
@@ -817,7 +817,7 @@
 					"fig = px.histogram (df, x = \"Expenses\",  facet_row = \"Education\",  template = 'plotly_dark')\n",
 					"fig.show ()"
 				],
-				"execution_count": 80
+				"execution_count": 86
 			},
 			{
 				"cell_type": "code",
@@ -842,7 +842,7 @@
 					"fig = px.histogram (df, x = \"NumTotalPurchases\",  facet_row = \"Education\",  template = 'plotly_dark')\n",
 					"fig.show ()"
 				],
-				"execution_count": 81
+				"execution_count": 87
 			},
 			{
 				"cell_type": "code",
@@ -867,7 +867,7 @@
 					"fig = px.histogram (df, x = \"Age\",  facet_row = \"Marital_Status\",  template = 'plotly_dark')\n",
 					"fig.show ()"
 				],
-				"execution_count": 82
+				"execution_count": 88
 			},
 			{
 				"cell_type": "code",
@@ -892,7 +892,7 @@
 					"fig = px.histogram (df, x = \"Income\",  facet_row = \"Marital_Status\",  template = 'plotly_dark')\n",
 					"fig.show ()"
 				],
-				"execution_count": 83
+				"execution_count": 89
 			},
 			{
 				"cell_type": "markdown",
@@ -933,7 +933,7 @@
 					"fig =  px.pie (df, names = \"Education\", hole = 0.4, template = \"plotly_dark\")\n",
 					"fig.show ()"
 				],
-				"execution_count": 84
+				"execution_count": 90
 			},
 			{
 				"cell_type": "markdown",
@@ -974,7 +974,7 @@
 					"sns.barplot(x = df['Expenses'],y = df['Education']);\n",
 					"plt.title('Total Expense based on the Education Level');"
 				],
-				"execution_count": 85
+				"execution_count": 91
 			},
 			{
 				"cell_type": "code",
@@ -999,7 +999,7 @@
 					"sns.barplot(x = df['Income'],y = df['Education']);\n",
 					"plt.title('Total Income based on the Education Level');"
 				],
-				"execution_count": 86
+				"execution_count": 92
 			},
 			{
 				"cell_type": "code",
@@ -1023,7 +1023,7 @@
 				"source": [
 					""
 				],
-				"execution_count": 87
+				"execution_count": null
 			}
 		]
 	}
