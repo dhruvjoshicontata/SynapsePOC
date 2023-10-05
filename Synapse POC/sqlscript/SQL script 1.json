@@ -1,0 +1,17 @@
+{
+	"name": "SQL script 1",
+	"properties": {
+		"content": {
+			"query": "SELECT TOP (100) [PatientId]\n,[Name]\n,[Location]\n,[HCP]\n,[Status]\n,[ReferralSource]\n,[SubReferralSource]\n,[ApptDate]\n,[ApptType]\n,[ME_ID]\n,[ME_FullName]\n,[LastModifiedOn]\n,[SycleExportDate]\n,[SubReferralSourceCode]\n,[FranchiseOwner]\n FROM [BRONZE].[AppointmentData]",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "PATIENT_INFORMATION_SYSTEM",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
