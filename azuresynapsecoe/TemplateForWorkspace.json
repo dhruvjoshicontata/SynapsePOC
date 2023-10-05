@@ -1,0 +1,3718 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "azuresynapsecoe"
+		},
+		"AzureDataLakeStorageBronze_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'AzureDataLakeStorageBronze'"
+		},
+		"azuresynapsecoe-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'azuresynapsecoe-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:azuresynapsecoe.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"AzureDataLakeStorageBronze_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://azuresynapsecoe.dfs.core.windows.net/"
+		},
+		"azuresynapsecoe-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://azuresynapsecoe.dfs.core.windows.net"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/Spark1')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/pl_Appointment_Bronze_Silver')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Get Metadata Appointment Data",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "Parquet1",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "ParquetReadSettings"
+							}
+						}
+					},
+					{
+						"name": "ForEach1",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Get Metadata Appointment Data",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Get Metadata Appointment Data').output.childItems",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Get Metadata1",
+									"type": "GetMetadata",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "Parquet1",
+											"type": "DatasetReference",
+											"parameters": {}
+										},
+										"fieldList": [
+											"lastModified"
+										],
+										"storeSettings": {
+											"type": "AzureBlobFSReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "ParquetReadSettings"
+										}
+									}
+								},
+								{
+									"name": "If Condition1",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "Get Metadata1",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@greater(activity('Get Metadata1').output.lastModified, variables('maxTime'))",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "Set variable2",
+												"type": "SetVariable",
+												"dependsOn": [],
+												"policy": {
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "maxTime",
+													"value": {
+														"value": "@activity('Get Metadata1').output.lastModified",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Copy data1",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "ForEach1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"modifiedDatetimeStart": {
+										"value": "@variables('maxTime')",
+										"type": "Expression"
+									},
+									"wildcardFileName": "*.csv",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "ParquetSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "FlattenHierarchy"
+								},
+								"formatSettings": {
+									"type": "ParquetWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"name": "PatientID",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "PatientID",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "Name",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "Name",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "Location",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "Location",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "HCP",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "HCP",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "Status",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "Status",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "ReferralSource",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "ReferralSource",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "SubReferralSource",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "SubReferralSource",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "ApptDate",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "ApptDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "ApptType",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "ApptType",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "ME_ID",
+											"type": "Int64",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "ME_ID",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "ME_FullName",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "ME_FullName",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "LastmodifiedOn",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "LastmodifiedOn",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "SycleExportDate",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "SycleExportDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "SubReferralSourceCode",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "SubReferralSourceCode",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "FranchiseOwner",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "FranchiseOwner",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									}
+								],
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "DelimitedTextAppointmentData",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "Parquet1",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "Set variable1",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Copy data1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "finalTime",
+							"value": {
+								"value": "@variables('maxTime')",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"variables": {
+					"maxTime": {
+						"type": "String",
+						"defaultValue": "2023-09-25"
+					},
+					"finalTime": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-09-27T10:14:34Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/Parquet1')]",
+				"[concat(variables('workspaceId'), '/datasets/DelimitedTextAppointmentData')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/pl_MasterPipeLine')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Execute Pipeline Appoinment Data",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_Appointment_Bronze_Silver",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "Execute Pipeline Patient Data",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "Execute Pipeline Appoinment Data",
+								"dependencyConditions": [
+									"Succeeded",
+									"Completed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_Patient_Bronze_Silver",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "Execute Pipeline Sales Data",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "Execute Pipeline Patient Data",
+								"dependencyConditions": [
+									"Succeeded",
+									"Completed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_Sales_Bronze_Silver",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-09-27T12:17:01Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/pipelines/pl_Appointment_Bronze_Silver')]",
+				"[concat(variables('workspaceId'), '/pipelines/pl_Patient_Bronze_Silver')]",
+				"[concat(variables('workspaceId'), '/pipelines/pl_Sales_Bronze_Silver')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/pl_Patient_Bronze_Silver')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Get Metadata Patient Data",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ParquetPatient",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "ParquetReadSettings"
+							}
+						}
+					},
+					{
+						"name": "ForEach1",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Get Metadata Patient Data",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Get Metadata Patient Data').output.childItems",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Get Metadata1",
+									"type": "GetMetadata",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "ParquetPatient",
+											"type": "DatasetReference",
+											"parameters": {}
+										},
+										"fieldList": [
+											"lastModified"
+										],
+										"storeSettings": {
+											"type": "AzureBlobFSReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "ParquetReadSettings"
+										}
+									}
+								},
+								{
+									"name": "If Condition1",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "Get Metadata1",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@greater(activity('Get Metadata1').output.lastModified, variables('maxTime'))",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "Set variable2",
+												"type": "SetVariable",
+												"dependsOn": [],
+												"policy": {
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "maxTime",
+													"value": {
+														"value": "@activity('Get Metadata1').output.lastModified",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Copy data1",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "ForEach1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"modifiedDatetimeStart": {
+										"value": "@variables('maxTime')",
+										"type": "Expression"
+									},
+									"wildcardFileName": "*.csv",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "ParquetSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "FlattenHierarchy"
+								},
+								"formatSettings": {
+									"type": "ParquetWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"name": "PatientsId",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "PatientsId",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "Franchise",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "Franchise",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "ClinicDefault",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "ClinicDefault",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "Patient",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "Patient",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "Staff",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "Staff",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "PatientCategory",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "PatientCategory",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "PatientArchive",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "PatientArchive",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "ClinicArchive",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "ClinicArchive",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "Street1",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "Street1",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "Street2",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "Street2",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "City",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "City",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "State",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "State",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "ZipCode",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "ZipCode",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "Gender",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "Gender",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "DOB",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "DOB",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "HomePhone",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "HomePhone",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "CellPhone",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "CellPhone",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "WorkPhone",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "WorkPhone",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "OtherPhone",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "OtherPhone",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "Email",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "Email",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "RefSourceName",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "RefSourceName",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "PatientCreateDate",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "PatientCreateDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "LastApptDate",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "LastApptDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "LastPurchaseDate",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "LastPurchaseDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "WarrantyDate",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "WarrantyDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "NextApptDate",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "NextApptDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "MailStatus",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "MailStatus",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "EmailStatus",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "EmailStatus",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "CallStatus",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "CallStatus",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "HIPAASigned",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "HIPAASigned",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "TextStatus",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "TextStatus",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "PatientLastUpdateDate",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "PatientLastUpdateDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "LastTestApptDate",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "LastTestApptDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "PatientLossLevel",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "PatientLossLevel",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "ME_ID",
+											"type": "Int32",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "ME_ID",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "ME_FullName",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "ME_FullName",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "LastModifiedDate",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "LastModifiedDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "SycleExportDate",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "SycleExportDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "FranchiseOwner",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "FranchiseOwner",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									}
+								],
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "DelimitedTextPatient",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ParquetPatient",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "Set variable1",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Copy data1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "finalTime",
+							"value": {
+								"value": "@variables('maxTime')",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"variables": {
+					"maxTime": {
+						"type": "String",
+						"defaultValue": "2023-09-25"
+					},
+					"finalTime": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-09-27T10:33:56Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/ParquetPatient')]",
+				"[concat(variables('workspaceId'), '/datasets/DelimitedTextPatient')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/pl_Sales_Bronze_Silver')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Get Metadata Sales Data",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ParquetSales",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "ParquetReadSettings"
+							}
+						}
+					},
+					{
+						"name": "ForEach1",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Get Metadata Sales Data",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Get Metadata Sales Data').output.childItems",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Get Metadata1",
+									"type": "GetMetadata",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "ParquetSales",
+											"type": "DatasetReference",
+											"parameters": {}
+										},
+										"fieldList": [
+											"lastModified"
+										],
+										"storeSettings": {
+											"type": "AzureBlobFSReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "ParquetReadSettings"
+										}
+									}
+								},
+								{
+									"name": "If Condition1",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "Get Metadata1",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@greater(activity('Get Metadata1').output.lastModified, variables('maxTime'))",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "Set variable2",
+												"type": "SetVariable",
+												"dependsOn": [],
+												"policy": {
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "maxTime",
+													"value": {
+														"value": "@activity('Get Metadata1').output.lastModified",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Copy data1",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "ForEach1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"modifiedDatetimeStart": {
+										"value": "@variables('maxTime')",
+										"type": "Expression"
+									},
+									"wildcardFileName": "*.csv",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "ParquetSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "FlattenHierarchy"
+								},
+								"formatSettings": {
+									"type": "ParquetWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"name": "id",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "id",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "PurchaseDate",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "PurchaseDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "DeliveryDate",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "DeliveryDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "HCP",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "HCP",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "ReferralSource",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "ReferralSource",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "SubReferralSource",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "SubReferralSource",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "Manufacturer",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "Manufacturer",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "Model",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "Model",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "SN",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "SN",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "SalesType",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "SalesType",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "ItemType",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "ItemType",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "NetSales",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "NetSales",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "NetUnits",
+											"type": "Int64",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "NetUnits",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "CustomerIdName",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "CustomerIdName",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "Location",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "Location",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "LastModifiedDate",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "LastModifiedDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "SycleExportDate",
+											"type": "DateTime",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "SycleExportDate",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "SubReferralSourceCode",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "SubReferralSourceCode",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "FranchiseOwner",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "FranchiseOwner",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									}
+								],
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "DelimitedTextSales",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ParquetSales",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "Set variable1",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Copy data1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "finalTime",
+							"value": {
+								"value": "@variables('maxTime')",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"variables": {
+					"maxTime": {
+						"type": "String",
+						"defaultValue": "2023-09-25"
+					},
+					"finalTime": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-09-27T10:34:02Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/ParquetSales')]",
+				"[concat(variables('workspaceId'), '/datasets/DelimitedTextSales')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DelimitedTextAppointmentData')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorageBronze",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Raw/AppointmentData",
+						"fileSystem": "azuresynapsebronze"
+					},
+					"columnDelimiter": "|",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "PatientID",
+						"type": "String"
+					},
+					{
+						"name": "Name",
+						"type": "String"
+					},
+					{
+						"name": "Location",
+						"type": "String"
+					},
+					{
+						"name": "HCP",
+						"type": "String"
+					},
+					{
+						"name": "Status",
+						"type": "String"
+					},
+					{
+						"name": "ReferralSource",
+						"type": "String"
+					},
+					{
+						"name": "SubReferralSource",
+						"type": "String"
+					},
+					{
+						"name": "ApptDate",
+						"type": "String"
+					},
+					{
+						"name": "ApptType",
+						"type": "String"
+					},
+					{
+						"name": "ME_ID",
+						"type": "String"
+					},
+					{
+						"name": "ME_FullName",
+						"type": "String"
+					},
+					{
+						"name": "LastmodifiedOn",
+						"type": "String"
+					},
+					{
+						"name": "SycleExportDate",
+						"type": "String"
+					},
+					{
+						"name": "SubReferralSourceCode",
+						"type": "String"
+					},
+					{
+						"name": "FranchiseOwner",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureDataLakeStorageBronze')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DelimitedTextPatient')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorageBronze",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "PatientData23.csv",
+						"folderPath": "Raw/PatientData",
+						"fileSystem": "azuresynapsebronze"
+					},
+					"columnDelimiter": "|",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "PatientsId",
+						"type": "String"
+					},
+					{
+						"name": "Franchise",
+						"type": "String"
+					},
+					{
+						"name": "ClinicDefault",
+						"type": "String"
+					},
+					{
+						"name": "Patient",
+						"type": "String"
+					},
+					{
+						"name": "Staff",
+						"type": "String"
+					},
+					{
+						"name": "PatientCategory",
+						"type": "String"
+					},
+					{
+						"name": "PatientArchive",
+						"type": "String"
+					},
+					{
+						"name": "ClinicArchive",
+						"type": "String"
+					},
+					{
+						"name": "Street1",
+						"type": "String"
+					},
+					{
+						"name": "Street2",
+						"type": "String"
+					},
+					{
+						"name": "City",
+						"type": "String"
+					},
+					{
+						"name": "State",
+						"type": "String"
+					},
+					{
+						"name": "ZipCode",
+						"type": "String"
+					},
+					{
+						"name": "Gender",
+						"type": "String"
+					},
+					{
+						"name": "DOB",
+						"type": "String"
+					},
+					{
+						"name": "HomePhone",
+						"type": "String"
+					},
+					{
+						"name": "CellPhone",
+						"type": "String"
+					},
+					{
+						"name": "WorkPhone",
+						"type": "String"
+					},
+					{
+						"name": "OtherPhone",
+						"type": "String"
+					},
+					{
+						"name": "Email",
+						"type": "String"
+					},
+					{
+						"name": "RefSourceName",
+						"type": "String"
+					},
+					{
+						"name": "PatientCreateDate",
+						"type": "String"
+					},
+					{
+						"name": "LastApptDate",
+						"type": "String"
+					},
+					{
+						"name": "LastPurchaseDate",
+						"type": "String"
+					},
+					{
+						"name": "WarrantyDate",
+						"type": "String"
+					},
+					{
+						"name": "NextApptDate",
+						"type": "String"
+					},
+					{
+						"name": "MailStatus",
+						"type": "String"
+					},
+					{
+						"name": "EmailStatus",
+						"type": "String"
+					},
+					{
+						"name": "CallStatus",
+						"type": "String"
+					},
+					{
+						"name": "HIPAASigned",
+						"type": "String"
+					},
+					{
+						"name": "TextStatus",
+						"type": "String"
+					},
+					{
+						"name": "PatientLastUpdateDate",
+						"type": "String"
+					},
+					{
+						"name": "LastTestApptDate",
+						"type": "String"
+					},
+					{
+						"name": "PatientLossLevel",
+						"type": "String"
+					},
+					{
+						"name": "ME_ID",
+						"type": "String"
+					},
+					{
+						"name": "ME_FullName",
+						"type": "String"
+					},
+					{
+						"name": "LastModifiedDate",
+						"type": "String"
+					},
+					{
+						"name": "SycleExportDate",
+						"type": "String"
+					},
+					{
+						"name": "FranchiseOwner",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureDataLakeStorageBronze')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DelimitedTextSales')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorageBronze",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "SalesData23.csv",
+						"folderPath": "Raw/SalesData",
+						"fileSystem": "azuresynapsebronze"
+					},
+					"columnDelimiter": "|",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "id",
+						"type": "String"
+					},
+					{
+						"name": "PurchaseDate",
+						"type": "String"
+					},
+					{
+						"name": "DeliveryDate",
+						"type": "String"
+					},
+					{
+						"name": "HCP",
+						"type": "String"
+					},
+					{
+						"name": "ReferralSource",
+						"type": "String"
+					},
+					{
+						"name": "SubReferralSource",
+						"type": "String"
+					},
+					{
+						"name": "Manufacturer",
+						"type": "String"
+					},
+					{
+						"name": "Model",
+						"type": "String"
+					},
+					{
+						"name": "SN",
+						"type": "String"
+					},
+					{
+						"name": "SalesType",
+						"type": "String"
+					},
+					{
+						"name": "ItemType",
+						"type": "String"
+					},
+					{
+						"name": "NetSales",
+						"type": "String"
+					},
+					{
+						"name": "NetUnits",
+						"type": "String"
+					},
+					{
+						"name": "CustomerIdName",
+						"type": "String"
+					},
+					{
+						"name": "Location",
+						"type": "String"
+					},
+					{
+						"name": "LastModifiedDate",
+						"type": "String"
+					},
+					{
+						"name": "SycleExportDate",
+						"type": "String"
+					},
+					{
+						"name": "SubReferralSourceCode",
+						"type": "String"
+					},
+					{
+						"name": "FranchiseOwner",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureDataLakeStorageBronze')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Parquet1')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorageBronze",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Silver/AppointmentData",
+						"fileSystem": "azuresynapsebronze"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureDataLakeStorageBronze')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/ParquetPatient')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorageBronze",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Silver/PatientData",
+						"fileSystem": "azuresynapsebronze"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": [
+					{
+						"name": "PatientsId",
+						"type": "UTF8"
+					},
+					{
+						"name": "Franchise",
+						"type": "UTF8"
+					},
+					{
+						"name": "ClinicDefault",
+						"type": "UTF8"
+					},
+					{
+						"name": "Patient",
+						"type": "UTF8"
+					},
+					{
+						"name": "Staff",
+						"type": "UTF8"
+					},
+					{
+						"name": "PatientCategory",
+						"type": "UTF8"
+					},
+					{
+						"name": "PatientArchive",
+						"type": "UTF8"
+					},
+					{
+						"name": "ClinicArchive",
+						"type": "UTF8"
+					},
+					{
+						"name": "Street1",
+						"type": "UTF8"
+					},
+					{
+						"name": "Street2",
+						"type": "UTF8"
+					},
+					{
+						"name": "City",
+						"type": "UTF8"
+					},
+					{
+						"name": "State",
+						"type": "UTF8"
+					},
+					{
+						"name": "ZipCode",
+						"type": "UTF8"
+					},
+					{
+						"name": "Gender",
+						"type": "UTF8"
+					},
+					{
+						"name": "DOB",
+						"type": "UTF8"
+					},
+					{
+						"name": "HomePhone",
+						"type": "UTF8"
+					},
+					{
+						"name": "CellPhone",
+						"type": "UTF8"
+					},
+					{
+						"name": "WorkPhone",
+						"type": "UTF8"
+					},
+					{
+						"name": "OtherPhone",
+						"type": "UTF8"
+					},
+					{
+						"name": "Email",
+						"type": "UTF8"
+					},
+					{
+						"name": "RefSourceName",
+						"type": "UTF8"
+					},
+					{
+						"name": "PatientCreateDate",
+						"type": "UTF8"
+					},
+					{
+						"name": "LastApptDate",
+						"type": "UTF8"
+					},
+					{
+						"name": "LastPurchaseDate",
+						"type": "UTF8"
+					},
+					{
+						"name": "WarrantyDate",
+						"type": "UTF8"
+					},
+					{
+						"name": "NextApptDate",
+						"type": "UTF8"
+					},
+					{
+						"name": "MailStatus",
+						"type": "UTF8"
+					},
+					{
+						"name": "EmailStatus",
+						"type": "UTF8"
+					},
+					{
+						"name": "CallStatus",
+						"type": "UTF8"
+					},
+					{
+						"name": "HIPAASigned",
+						"type": "UTF8"
+					},
+					{
+						"name": "TextStatus",
+						"type": "UTF8"
+					},
+					{
+						"name": "PatientLastUpdateDate",
+						"type": "UTF8"
+					},
+					{
+						"name": "LastTestApptDate",
+						"type": "UTF8"
+					},
+					{
+						"name": "PatientLossLevel",
+						"type": "UTF8"
+					},
+					{
+						"name": "ME_ID",
+						"type": "INT64"
+					},
+					{
+						"name": "ME_FullName",
+						"type": "UTF8"
+					},
+					{
+						"name": "LastModifiedDate",
+						"type": "INT96"
+					},
+					{
+						"name": "SycleExportDate",
+						"type": "INT96"
+					},
+					{
+						"name": "FranchiseOwner",
+						"type": "UTF8"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureDataLakeStorageBronze')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/ParquetSales')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorageBronze",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Silver/SalesData",
+						"fileSystem": "azuresynapsebronze"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": [
+					{
+						"name": "id",
+						"type": "UTF8"
+					},
+					{
+						"name": "PurchaseDate",
+						"type": "INT96"
+					},
+					{
+						"name": "DeliveryDate",
+						"type": "INT96"
+					},
+					{
+						"name": "HCP",
+						"type": "UTF8"
+					},
+					{
+						"name": "ReferralSource",
+						"type": "UTF8"
+					},
+					{
+						"name": "SubReferralSource",
+						"type": "UTF8"
+					},
+					{
+						"name": "Manufacturer",
+						"type": "UTF8"
+					},
+					{
+						"name": "Model",
+						"type": "UTF8"
+					},
+					{
+						"name": "SN",
+						"type": "UTF8"
+					},
+					{
+						"name": "SalesType",
+						"type": "UTF8"
+					},
+					{
+						"name": "ItemType",
+						"type": "UTF8"
+					},
+					{
+						"name": "NetSales",
+						"type": "UTF8"
+					},
+					{
+						"name": "NetUnits",
+						"type": "UTF8"
+					},
+					{
+						"name": "CustomerIdName",
+						"type": "UTF8"
+					},
+					{
+						"name": "Location",
+						"type": "UTF8"
+					},
+					{
+						"name": "LastModifiedDate",
+						"type": "INT96"
+					},
+					{
+						"name": "SycleExportDate",
+						"type": "INT96"
+					},
+					{
+						"name": "SubReferralSourceCode",
+						"type": "UTF8"
+					},
+					{
+						"name": "FranchiseOwner",
+						"type": "UTF8"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureDataLakeStorageBronze')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureDataLakeStorageBronze')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('AzureDataLakeStorageBronze_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('AzureDataLakeStorageBronze_accountKey')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/PowerBIWorkspace_Demo')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "PowerBIWorkspace",
+				"typeProperties": {
+					"workspaceID": "513d434f-c813-4777-9051-1100fd5c4042",
+					"tenantID": "1f2b5de9-e9dd-419a-ade5-fee6c92e7f92"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/azuresynapsecoe-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('azuresynapsecoe-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/azuresynapsecoe-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('azuresynapsecoe-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/1-Create Source External Tables')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "SQL Ingestion Script/Transformation of Data"
+				},
+				"content": {
+					"query": "\n\nUSE PATIENT_INFORMATION_SYSTEM\nGO\n\n--  BRONZE APPOINT DATA EXTERNAL TABLE\n    CREATE EXTERNAL TABLE PATIENT_INFORMATION_SYSTEM.BRONZE.AppointmentData (\n        PatientId VARCHAR(100),\n        [Name] VARCHAR(100), \n        [Location] VARCHAR(100),\n        HCP VARCHAR(100),\n        Status VARCHAR(50),\n        ReferralSource VARCHAR(100),\n        SubReferralSource VARCHAR(200),\n        ApptDate datetime2(0),\n        ApptType VARCHAR(100),\n        ME_ID BIGINT,\n        ME_FullName VARCHAR(100),\n        LastModifiedOn datetime2(0),\n        SycleExportDate datetime2(0),\n        SubReferralSourceCode VARCHAR(100),\n        FranchiseOwner VARCHAR(100)\n        )\n        WITH (\n        LOCATION = '/Raw/AppointmentData/*.csv',\n        DATA_SOURCE = PATIENT_INFORMATION_SYSTEM_SRC,\n        FILE_FORMAT = PATIENT_INFORMATION_SYSTEM_SRC_FORMAT\n        )\nGO\n\n\n\n-- BRONZE PATIENT DATA EXTERNAL TABLE\n\nCREATE EXTERNAL TABLE PATIENT_INFORMATION_SYSTEM.BRONZE.PatientData (\n    PatientsId\tVARCHAR(100)\t,\n    Franchise\tvarchar(200)\t,\n    ClinicDefault\tvarchar(200)\t,\n    Patient\tvarchar(200)\t,\n    Staff\tvarchar(200)\t,\n    PatientCategory\tvarchar(200)\t,\n    PatientArchive\tvarchar(200)\t,\n    ClinicArchive\tvarchar(200)\t,\n    Street1\tvarchar(200)\t,\n    Street2\tvarchar(200)\t,\n    City\tvarchar(200)\t,\n    State\tvarchar(200)\t,\n    ZipCode\tvarchar(200)\t,\n    Gender\tvarchar(200)\t,\n    DOB\tvarchar(200)\t,\n    HomePhone\tvarchar(200)\t,\n    CellPhone\tvarchar(200)\t,\n    WorkPhone\tvarchar(200)\t,\n    OtherPhone\tvarchar(200)\t,\n    Email\tvarchar(200)\t,\n    RefSourceName\tvarchar(200)\t,\n    PatientCreateDate\tdatetime2(0)\t,\n    LastApptDate\tdatetime2(0)\t,\n    LastPurchaseDate\tdatetime2(0)\t,\n    WarrantyDate\tvarchar(200)\t,\n    NextApptDate\tdatetime2(0)\t,\n    MailStatus\tvarchar(200)\t,\n    EmailStatus\tvarchar(200)\t,\n    CallStatus\tvarchar(200)\t,\n    HIPAASigned\tvarchar(200)\t,\n    TextStatus\tvarchar(200)\t,\n    PatientLastUpdateDate\tdatetime2(0)\t,\n    LastTestApptDate\tdatetime2(0)\t,\n    PatientLossLevel\tbigint\t,\n    ME_ID\tbigint\t,\n    ME_FullName\tvarchar(200)\t,\n    LastModifiedDate\tdatetime2(0)\t,\n    SycleExportDate\tdate\t,\n    FranchiseOwner\tvarchar(200)\t\n)\n\tWITH (\n\tLOCATION = '/Raw/PatientData/*.csv',\n\tDATA_SOURCE = PATIENT_INFORMATION_SYSTEM_SRC,\n\tFILE_FORMAT = PATIENT_INFORMATION_SYSTEM_SRC_FORMAT\n\t)\nGO\n\n-- BRONZE SALES DATA EXTERNAL TABLE\n\nCREATE EXTERNAL TABLE PATIENT_INFORMATION_SYSTEM.BRONZE.SalesData (\n    id\tbigint\t,\n    PurchaseDate\tdate\t,\n    DeliveryDate\tdate\t,\n    HCP\tvarchar(200)\t,\n    ReferralSource\tvarchar(200)\t,\n    SubReferralSource\tvarchar(200)\t,\n    Manufacturer\tvarchar(200)\t,\n    Model\tvarchar(200)\t,\n    SN\tvarchar(200)\t,\n    SalesType\tvarchar(200)\t,\n    ItemType\tvarchar(200)\t,\n    NetSales\tfloat\t,\n    NetUnits\tbigint\t,\n    CustomerIdName\tvarchar(200)\t,\n    Location\tvarchar(200)\t,\n    LastModifiedDate\tdatetime2(0)\t,\n    SycleExportDate\tdate\t,\n    SubReferralSourceCode\tvarchar(200)\t,\n    FranchiseOwner\tvarchar(200)\t\n    )\n\tWITH (\n\tLOCATION = '/Raw/SalesData/*.csv',\n\tDATA_SOURCE = PATIENT_INFORMATION_SYSTEM_SRC,\n\tFILE_FORMAT = PATIENT_INFORMATION_SYSTEM_SRC_FORMAT\n\t)\nGO\n\n\n\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "PATIENT_INFORMATION_SYSTEM",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/1-Inital Setup')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "SQL Ingestion Script/Initial Setup Script"
+				},
+				"content": {
+					"query": "-- This is auto-generated code\n\nUSE MASTER \nGO\n\nCREATE DATABASE PATIENT_INFORMATION_SYSTEM\nGO\n\nALTER DATABASE PATIENT_INFORMATION_SYSTEM COLLATE Latin1_General_100_BIN2_UTF8 \nGO\n\n\nUSE PATIENT_INFORMATION_SYSTEM\nGO\n\n\nCREATE SCHEMA BRONZE;\nGO\n\nCREATE SCHEMA SILVER;\nGO\n\nCREATE SCHEMA GOLD;\nGO\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "PATIENT_INFORMATION_SYSTEM",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/2-External Data Source')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "SQL Ingestion Script/Initial Setup Script"
+				},
+				"content": {
+					"query": "USE PATIENT_INFORMATION_SYSTEM\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'PATIENT_INFORMATION_SYSTEM_SRC') \n\tCREATE EXTERNAL DATA SOURCE PATIENT_INFORMATION_SYSTEM_SRC\n\tWITH (\n\t\tLOCATION = 'https://azuresynapsecoe.dfs.core.windows.net/azuresynapsebronze' \n\t)\nGO\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "PATIENT_INFORMATION_SYSTEM",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/2-SILVER_Cleansing_AND_Transformation')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "SQL Ingestion Script/Transformation of Data"
+				},
+				"content": {
+					"query": "-- GENERATING SILVER TABLES IN PARQUET FORMAT\n-- CLEANSED THE DUPLICATE DATA \n-- TRANSFORMATION WITH NEW COLUMNS IN SalesData Table\n\n\nCREATE EXTERNAL TABLE PATIENT_INFORMATION_SYSTEM.SILVER.AppointmentData\n(\nPatientID\tvarchar(200)\t,\nName\tvarchar(200)\t,\nLocation\tvarchar(200)\t,\nHCP\tvarchar(200)\t,\nStatus\tvarchar(200)\t,\nReferralSource\tvarchar(200)\t,\nSubReferralSource\tvarchar(200)\t,\nApptDate\tdatetime2(7)\t,\nApptType\tvarchar(200)\t,\nME_ID\tbigint\t,\nME_FullName\tvarchar(200)\t,\nLastmodifiedOn\tdatetime2(7)\t,\nSycleExportDate\tdatetime2(7)\t,\nSubReferralSourceCode\tvarchar(200)\t,\nFranchiseOwner\tvarchar(200)\t\n)\n  WITH(\n  LOCATION = '/Silver/AppointmentData',\n\tDATA_SOURCE = PATIENT_INFORMATION_SYSTEM_SRC,\n\tFILE_FORMAT = PATIENT_INFORMATION_SYSTEM_SRC__PARQUET_FORMAT\n  )\n\nGO\n\nCREATE EXTERNAL TABLE PATIENT_INFORMATION_SYSTEM.SILVER.PatientData\n(\nPatientsId\tvarchar(200)\t,\nFranchise\tvarchar(200)\t,\nClinicDefault\tvarchar(200)\t,\nPatient\tvarchar(200)\t,\nStaff\tvarchar(200)\t,\nPatientCategory\tvarchar(200)\t,\nPatientArchive\tvarchar(200)\t,\nClinicArchive\tvarchar(200)\t,\nStreet1\tvarchar(200)\t,\nStreet2\tvarchar(200)\t,\nCity\tvarchar(200)\t,\nState\tvarchar(200)\t,\nZipCode\tvarchar(200)\t,\nGender\tvarchar(200)\t,\nDOB\tvarchar(200)\t,\nHomePhone\tvarchar(200)\t,\nCellPhone\tvarchar(200)\t,\nWorkPhone\tvarchar(200)\t,\nOtherPhone\tvarchar(200)\t,\nEmail\tvarchar(200)\t,\nRefSourceName\tvarchar(200)\t,\nPatientCreateDate\tvarchar(200)\t,\nLastApptDate\tvarchar(200)\t,\nLastPurchaseDate\tvarchar(200)\t,\nWarrantyDate\tvarchar(200)\t,\nNextApptDate\tvarchar(200)\t,\nMailStatus\tvarchar(200)\t,\nEmailStatus\tvarchar(200)\t,\nCallStatus\tvarchar(200)\t,\nHIPAASigned\tvarchar(200)\t,\nTextStatus\tvarchar(200)\t,\nPatientLastUpdateDate\tvarchar(200)\t,\nLastTestApptDate\tvarchar(200)\t,\nPatientLossLevel\tvarchar(200)\t,\nME_ID\tbigint\t,\nME_FullName\tvarchar(200)\t,\nLastModifiedDate\tdatetime2(7)\t,\nSycleExportDate\tdatetime2(7)\t,\nFranchiseOwner\tvarchar(200)\t\n)\n  WITH(\n    LOCATION = '/Silver/PatientData',\n\tDATA_SOURCE = PATIENT_INFORMATION_SYSTEM_SRC,\n\tFILE_FORMAT = PATIENT_INFORMATION_SYSTEM_SRC__PARQUET_FORMAT\n  )\n  \nGO\n\nCREATE EXTERNAL TABLE PATIENT_INFORMATION_SYSTEM.SILVER.SalesData\n(\n  id\tvarchar(200)\t,\n  PurchaseDate\tdatetime2(7)\t,\n  DeliveryDate\tdatetime2(7)\t,\n  HCP\tvarchar(200)\t,\n  ReferralSource\tvarchar(200)\t,\n  SubReferralSource\tvarchar(200)\t,\n  Manufacturer\tvarchar(200)\t,\n  Model\tvarchar(200)\t,\n  SN\tvarchar(200)\t,\n  SalesType\tvarchar(200)\t,\n  ItemType\tvarchar(200)\t,\n  NetSales\tvarchar(200)\t,\n  NetUnits\tvarchar(200)\t,\n  CustomerIdName\tvarchar(200)\t,\n  Location\tvarchar(200)\t,\n  LastModifiedDate\tdatetime2(7)\t,\n  SycleExportDate\tdatetime2(7)\t,\n  SubReferralSourceCode\tvarchar(200)\t,\n  FranchiseOwner\tvarchar(200)\t\n)\n  WITH(\n  LOCATION = '/Silver/SalesData',\n\tDATA_SOURCE = PATIENT_INFORMATION_SYSTEM_SRC,\n\tFILE_FORMAT = PATIENT_INFORMATION_SYSTEM_SRC__PARQUET_FORMAT\n  )\n\nSELECT top 100 * FROM PATIENT_INFORMATION_SYSTEM.SILVER.PatientData\n\n\n\n\n\n\n\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "PATIENT_INFORMATION_SYSTEM",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/3-External File Format')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "SQL Ingestion Script/Initial Setup Script"
+				},
+				"content": {
+					"query": "USE PATIENT_INFORMATION_SYSTEM\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'PATIENT_INFORMATION_SYSTEM_SRC_FORMAT') \n\tCREATE EXTERNAL FILE FORMAT PATIENT_INFORMATION_SYSTEM_SRC_FORMAT\n\tWITH ( FORMAT_TYPE = DELIMITEDTEXT,\n        FORMAT_OPTIONS \n        (\n              FIELD_TERMINATOR = '|',\n              STRING_DELIMITER='\"',\n              FIRST_ROW = 2,\n              USE_TYPE_DEFAULT = FALSE,\n              ENCODING = 'UTF8',\n              PARSER_VERSION = '2.0'\n\n        )\n    )\n\nIF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'PATIENT_INFORMATION_SYSTEM_SRC__PARQUET_FORMAT') \n\tCREATE EXTERNAL FILE FORMAT PATIENT_INFORMATION_SYSTEM_SRC__PARQUET_FORMAT\n\tWITH ( FORMAT_TYPE = PARQUET)\nGO",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "PATIENT_INFORMATION_SYSTEM",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/customer-analysis-eda-report-clustering')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "Spark1",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "8cdad33f-7751-4863-a3f7-5cf71c06b947"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/43b4bb12-b882-46e7-93a4-0e6afb14206a/resourceGroups/Synapsecoe/providers/Microsoft.Synapse/workspaces/azuresynapsecoe/bigDataPools/Spark1",
+						"name": "Spark1",
+						"type": "Spark",
+						"endpoint": "https://azuresynapsecoe.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/Spark1",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.3",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28,
+						"automaticScaleJobs": false
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:37.949710Z",
+								"iopub.status.busy": "2021-10-10T08:47:37.948987Z",
+								"iopub.status.idle": "2021-10-10T08:47:41.159717Z",
+								"shell.execute_reply": "2021-10-10T08:47:41.158835Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:24.704148Z"
+							},
+							"papermill": {
+								"duration": 3.266399,
+								"end_time": "2021-10-10T08:47:41.159856",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:37.893457",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Importing all the necessary libraries\n",
+							"\n",
+							"import numpy as np\n",
+							"import pandas as pd\n",
+							"import seaborn as sns\n",
+							"import plotly.express as px\n",
+							"import plotly.graph_objects as go\n",
+							"import matplotlib.pyplot as plt\n",
+							"%matplotlib inline\n",
+							"import warnings\n",
+							"warnings.filterwarnings('ignore')"
+						],
+						"outputs": [],
+						"execution_count": 23
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:41.319181Z",
+								"iopub.status.busy": "2021-10-10T08:47:41.317867Z",
+								"iopub.status.idle": "2021-10-10T08:47:41.574681Z",
+								"shell.execute_reply": "2021-10-10T08:47:41.575793Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:27.757355Z"
+							},
+							"papermill": {
+								"duration": 0.356915,
+								"end_time": "2021-10-10T08:47:41.576012",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:41.219097",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Reading and making a copy of the dataset\n",
+							"df = pd.read_csv(\"abfss://azuresynapsebronze@azuresynapsecoe.dfs.core.windows.net/Raw/EDA/marketing_campaign.csv\", sep=\"\\t\")\n",
+							"df.head()"
+						],
+						"outputs": [],
+						"execution_count": 24
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"papermill": {
+								"duration": 0.080963,
+								"end_time": "2021-10-10T08:47:41.742527",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:41.661564",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"### EDA"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:41.852174Z",
+								"iopub.status.busy": "2021-10-10T08:47:41.851266Z",
+								"iopub.status.idle": "2021-10-10T08:47:41.854075Z",
+								"shell.execute_reply": "2021-10-10T08:47:41.854499Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:27.942496Z"
+							},
+							"papermill": {
+								"duration": 0.058102,
+								"end_time": "2021-10-10T08:47:41.854630",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:41.796528",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Checking the shape of the dataset\n",
+							"\n",
+							"df.shape"
+						],
+						"outputs": [],
+						"execution_count": 25
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:41.979698Z",
+								"iopub.status.busy": "2021-10-10T08:47:41.968098Z",
+								"iopub.status.idle": "2021-10-10T08:47:41.983667Z",
+								"shell.execute_reply": "2021-10-10T08:47:41.984084Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:27.951470Z"
+							},
+							"papermill": {
+								"duration": 0.076193,
+								"end_time": "2021-10-10T08:47:41.984239",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:41.908046",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Finding the basic information regarding dataset\n",
+							"\n",
+							"df.info()"
+						],
+						"outputs": [],
+						"execution_count": 26
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"papermill": {
+								"duration": 0.05019,
+								"end_time": "2021-10-10T08:47:42.087478",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:42.037288",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"* Here we have only 3 object type datatype and rest are numerical."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:42.193183Z",
+								"iopub.status.busy": "2021-10-10T08:47:42.192334Z",
+								"iopub.status.idle": "2021-10-10T08:47:42.209606Z",
+								"shell.execute_reply": "2021-10-10T08:47:42.209135Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:27.990654Z"
+							},
+							"papermill": {
+								"duration": 0.071631,
+								"end_time": "2021-10-10T08:47:42.209723",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:42.138092",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Finding the number of unique values present in each column\n",
+							"\n",
+							"df.nunique()"
+						],
+						"outputs": [],
+						"execution_count": 27
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"papermill": {
+								"duration": 0.0516,
+								"end_time": "2021-10-10T08:47:42.312704",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:42.261104",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"**NOTE** \n",
+							"* In above cell \"Z_CostContact\" and \"Z_Revenue\" have same value in all the rows that's why they are not going to contribute anything in the model building. So we can drop them.  "
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:42.421439Z",
+								"iopub.status.busy": "2021-10-10T08:47:42.417551Z",
+								"iopub.status.idle": "2021-10-10T08:47:42.424271Z",
+								"shell.execute_reply": "2021-10-10T08:47:42.424685Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:28.034377Z"
+							},
+							"papermill": {
+								"duration": 0.062042,
+								"end_time": "2021-10-10T08:47:42.424816",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:42.362774",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Checking if any NaN is present in column or not\n",
+							"\n",
+							"df.isna().any()"
+						],
+						"outputs": [],
+						"execution_count": 28
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"papermill": {
+								"duration": 0.050988,
+								"end_time": "2021-10-10T08:47:42.526649",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:42.475661",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"* Income column have some missing value in it so we will need to fill it by by either mean or median."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:42.633181Z",
+								"iopub.status.busy": "2021-10-10T08:47:42.632291Z",
+								"iopub.status.idle": "2021-10-10T08:47:43.202067Z",
+								"shell.execute_reply": "2021-10-10T08:47:43.201636Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:28.053201Z"
+							},
+							"papermill": {
+								"duration": 0.625544,
+								"end_time": "2021-10-10T08:47:43.202208",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:42.576664",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Checking for null value using heatmap\n",
+							"\n",
+							"sns.heatmap(df.isnull())"
+						],
+						"outputs": [],
+						"execution_count": 29
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:43.334589Z",
+								"iopub.status.busy": "2021-10-10T08:47:43.333850Z",
+								"iopub.status.idle": "2021-10-10T08:47:43.337013Z",
+								"shell.execute_reply": "2021-10-10T08:47:43.337509Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:28.926694Z"
+							},
+							"papermill": {
+								"duration": 0.082149,
+								"end_time": "2021-10-10T08:47:43.337665",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:43.255516",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Dropping columns because they will not contribute anything in model building\n",
+							"\n",
+							"df=df.drop(columns=[\"Z_CostContact\", \"Z_Revenue\"],axis=1)\n",
+							"df.head()"
+						],
+						"outputs": [],
+						"execution_count": 30
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:43.455096Z",
+								"iopub.status.busy": "2021-10-10T08:47:43.454271Z",
+								"iopub.status.idle": "2021-10-10T08:47:46.087152Z",
+								"shell.execute_reply": "2021-10-10T08:47:46.087575Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:28.966204Z"
+							},
+							"papermill": {
+								"duration": 2.691953,
+								"end_time": "2021-10-10T08:47:46.087722",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:43.395769",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Finding the correlation between the feature column\n",
+							"\n",
+							"plt.figure(figsize=(20,20))\n",
+							"sns.heatmap(df.corr(), annot=True)\n",
+							"plt.show()"
+						],
+						"outputs": [],
+						"execution_count": 31
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"papermill": {
+								"duration": 0.061601,
+								"end_time": "2021-10-10T08:47:46.211100",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:46.149499",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"* No two columns are too much correlated with each other so we can't drop any column on the basis of correlation."
+						]
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"papermill": {
+								"duration": 0.061667,
+								"end_time": "2021-10-10T08:47:46.601159",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:46.539492",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"### Preprocessing of the dataset"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:46.730909Z",
+								"iopub.status.busy": "2021-10-10T08:47:46.730055Z",
+								"iopub.status.idle": "2021-10-10T08:47:46.738257Z",
+								"shell.execute_reply": "2021-10-10T08:47:46.737802Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:31.673511Z"
+							},
+							"papermill": {
+								"duration": 0.07574,
+								"end_time": "2021-10-10T08:47:46.738376",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:46.662636",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Filling the missing value in the income my mean\n",
+							"\n",
+							"df['Income'] = df['Income'].fillna(df['Income'].mean())\n",
+							"df.isna().any()"
+						],
+						"outputs": [],
+						"execution_count": 33
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:46.870126Z",
+								"iopub.status.busy": "2021-10-10T08:47:46.869267Z",
+								"iopub.status.idle": "2021-10-10T08:47:46.886422Z",
+								"shell.execute_reply": "2021-10-10T08:47:46.886866Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:31.687518Z"
+							},
+							"papermill": {
+								"duration": 0.086171,
+								"end_time": "2021-10-10T08:47:46.887007",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:46.800836",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"df.head()"
+						],
+						"outputs": [],
+						"execution_count": 34
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:47.018862Z",
+								"iopub.status.busy": "2021-10-10T08:47:47.017979Z",
+								"iopub.status.idle": "2021-10-10T08:47:47.025532Z",
+								"shell.execute_reply": "2021-10-10T08:47:47.025110Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:31.716502Z"
+							},
+							"papermill": {
+								"duration": 0.074821,
+								"end_time": "2021-10-10T08:47:47.025656",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:46.950835",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Checking number of unique categories present in the \"Marital_Status\"\n",
+							"\n",
+							"df['Marital_Status'].value_counts()  "
+						],
+						"outputs": [],
+						"execution_count": 35
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:47.161438Z",
+								"iopub.status.busy": "2021-10-10T08:47:47.160517Z",
+								"iopub.status.idle": "2021-10-10T08:47:47.162611Z",
+								"shell.execute_reply": "2021-10-10T08:47:47.163080Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:31.726253Z"
+							},
+							"papermill": {
+								"duration": 0.074216,
+								"end_time": "2021-10-10T08:47:47.163231",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:47.089015",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"df['Marital_Status'] = df['Marital_Status'].replace(['Married', 'Together'],'relationship')\n",
+							"df['Marital_Status'] = df['Marital_Status'].replace(['Divorced', 'Widow', 'Alone', 'YOLO', 'Absurd'],'Single')"
+						],
+						"outputs": [],
+						"execution_count": 36
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"papermill": {
+								"duration": 0.073316,
+								"end_time": "2021-10-10T08:47:47.302614",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:47.229298",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"* In the above cell we are grouping 'Married', 'Together' as \"relationship\" \n",
+							"* Whereas 'Divorced', 'Widow', 'Alone', 'YOLO', 'Absurd' as \"Single\""
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:47.440871Z",
+								"iopub.status.busy": "2021-10-10T08:47:47.440285Z",
+								"iopub.status.idle": "2021-10-10T08:47:47.442928Z",
+								"shell.execute_reply": "2021-10-10T08:47:47.443337Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:31.739215Z"
+							},
+							"papermill": {
+								"duration": 0.072473,
+								"end_time": "2021-10-10T08:47:47.443469",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:47.370996",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Count of different values present in Marital_Status\n",
+							"\n",
+							"df['Marital_Status'].value_counts()  "
+						],
+						"outputs": [],
+						"execution_count": 37
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:47.577687Z",
+								"iopub.status.busy": "2021-10-10T08:47:47.573875Z",
+								"iopub.status.idle": "2021-10-10T08:47:47.597992Z",
+								"shell.execute_reply": "2021-10-10T08:47:47.597013Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:31.749372Z"
+							},
+							"papermill": {
+								"duration": 0.092328,
+								"end_time": "2021-10-10T08:47:47.598110",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:47.505782",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Combining different dataframe into a single column to reduce the number of dimension\n",
+							"\n",
+							"df['Kids'] = df['Kidhome'] + df['Teenhome']\n",
+							"df['Expenses'] = df['MntWines'] + df['MntFruits'] + df['MntMeatProducts'] + df['MntFishProducts'] + df['MntSweetProducts'] + df['MntGoldProds']\n",
+							"df['TotalAcceptedCmp'] = df['AcceptedCmp1'] + df['AcceptedCmp2'] + df['AcceptedCmp3'] + df['AcceptedCmp4'] + df['AcceptedCmp5'] + df['Response']\n",
+							"df['NumTotalPurchases'] = df['NumWebPurchases'] + df['NumCatalogPurchases'] + df['NumStorePurchases'] + df['NumDealsPurchases']"
+						],
+						"outputs": [],
+						"execution_count": 38
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:47.729642Z",
+								"iopub.status.busy": "2021-10-10T08:47:47.728796Z",
+								"iopub.status.idle": "2021-10-10T08:47:47.742696Z",
+								"shell.execute_reply": "2021-10-10T08:47:47.743134Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:31.774632Z"
+							},
+							"papermill": {
+								"duration": 0.082491,
+								"end_time": "2021-10-10T08:47:47.743285",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:47.660794",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Deleting some column to reduce dimension and complexity of model\n",
+							"\n",
+							"col_del = [\"AcceptedCmp1\" , \"AcceptedCmp2\", \"AcceptedCmp3\" , \"AcceptedCmp4\",\"AcceptedCmp5\", \"Response\",\"NumWebVisitsMonth\", \"NumWebPurchases\",\"NumCatalogPurchases\",\"NumStorePurchases\",\"NumDealsPurchases\" , \"Kidhome\", \"Teenhome\",\"MntWines\", \"MntFruits\", \"MntMeatProducts\", \"MntFishProducts\", \"MntSweetProducts\", \"MntGoldProds\"]\n",
+							"df=df.drop(columns=col_del,axis=1)\n",
+							"df.head()"
+						],
+						"outputs": [],
+						"execution_count": 39
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:47.881193Z",
+								"iopub.status.busy": "2021-10-10T08:47:47.880210Z",
+								"iopub.status.idle": "2021-10-10T08:47:47.882061Z",
+								"shell.execute_reply": "2021-10-10T08:47:47.882549Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:31.794557Z"
+							},
+							"papermill": {
+								"duration": 0.074906,
+								"end_time": "2021-10-10T08:47:47.882698",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:47.807792",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Adding a column \"Age\" in the dataframe\n",
+							"\n",
+							"df['Age'] = 2015 - df[\"Year_Birth\"]"
+						],
+						"outputs": [],
+						"execution_count": 40
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:48.018408Z",
+								"iopub.status.busy": "2021-10-10T08:47:48.017731Z",
+								"iopub.status.idle": "2021-10-10T08:47:48.020600Z",
+								"shell.execute_reply": "2021-10-10T08:47:48.021005Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:31.802183Z"
+							},
+							"papermill": {
+								"duration": 0.07468,
+								"end_time": "2021-10-10T08:47:48.021144",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:47.946464",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"df['Education'].value_counts()"
+						],
+						"outputs": [],
+						"execution_count": 41
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:48.160826Z",
+								"iopub.status.busy": "2021-10-10T08:47:48.160090Z",
+								"iopub.status.idle": "2021-10-10T08:47:48.163616Z",
+								"shell.execute_reply": "2021-10-10T08:47:48.163179Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:31.814466Z"
+							},
+							"papermill": {
+								"duration": 0.077692,
+								"end_time": "2021-10-10T08:47:48.163745",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:48.086053",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"# Changing category into UG and PG only\n",
+							"\n",
+							"df['Education'] = df['Education'].replace(['PhD','2n Cycle','Graduation', 'Master'],'PG')  \n",
+							"df['Education'] = df['Education'].replace(['Basic'], 'UG')"
+						],
+						"outputs": [],
+						"execution_count": 42
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"papermill": {
+								"duration": 0.066648,
+								"end_time": "2021-10-10T08:47:48.587937",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:48.521289",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"### Visualization"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:48.726541Z",
+								"iopub.status.busy": "2021-10-10T08:47:48.725843Z",
+								"iopub.status.idle": "2021-10-10T08:47:49.589445Z",
+								"shell.execute_reply": "2021-10-10T08:47:49.589859Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:31.853965Z"
+							},
+							"papermill": {
+								"duration": 0.934965,
+								"end_time": "2021-10-10T08:47:49.590001",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:48.655036",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"fig = px.bar(df, x='Marital_Status', y='Expenses', color=\"Education\")\n",
+							"fig.show()"
+						],
+						"outputs": [],
+						"execution_count": 43
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:49.738613Z",
+								"iopub.status.busy": "2021-10-10T08:47:49.733992Z",
+								"iopub.status.idle": "2021-10-10T08:47:49.964751Z",
+								"shell.execute_reply": "2021-10-10T08:47:49.964304Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:32.691770Z"
+							},
+							"papermill": {
+								"duration": 0.30916,
+								"end_time": "2021-10-10T08:47:49.964877",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:49.655717",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"fig = px.bar(df, x='Marital_Status', y='Expenses', color=\"Marital_Status\")\n",
+							"fig.show()"
+						],
+						"outputs": [],
+						"execution_count": 44
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"papermill": {
+								"duration": 0.066178,
+								"end_time": "2021-10-10T08:47:50.098620",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:50.032442",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"**Less number of single customer**"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:50.237160Z",
+								"iopub.status.busy": "2021-10-10T08:47:50.236212Z",
+								"iopub.status.idle": "2021-10-10T08:47:50.362662Z",
+								"shell.execute_reply": "2021-10-10T08:47:50.363060Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:32.947605Z"
+							},
+							"papermill": {
+								"duration": 0.198057,
+								"end_time": "2021-10-10T08:47:50.363199",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:50.165142",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"fig = px.histogram (df, x = \"Expenses\",  facet_row = \"Marital_Status\",  template = 'plotly_dark')\n",
+							"fig.show ()"
+						],
+						"outputs": [],
+						"execution_count": 45
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:50.505299Z",
+								"iopub.status.busy": "2021-10-10T08:47:50.504438Z",
+								"iopub.status.idle": "2021-10-10T08:47:50.574907Z",
+								"shell.execute_reply": "2021-10-10T08:47:50.575316Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:33.092339Z"
+							},
+							"papermill": {
+								"duration": 0.14459,
+								"end_time": "2021-10-10T08:47:50.575453",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:50.430863",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"fig = px.histogram (df, x = \"Expenses\",  facet_row = \"Education\",  template = 'plotly_dark')\n",
+							"fig.show ()"
+						],
+						"outputs": [],
+						"execution_count": 46
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:50.729193Z",
+								"iopub.status.busy": "2021-10-10T08:47:50.728046Z",
+								"iopub.status.idle": "2021-10-10T08:47:50.794847Z",
+								"shell.execute_reply": "2021-10-10T08:47:50.795270Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:33.179135Z"
+							},
+							"papermill": {
+								"duration": 0.151045,
+								"end_time": "2021-10-10T08:47:50.795414",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:50.644369",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"fig = px.histogram (df, x = \"NumTotalPurchases\",  facet_row = \"Education\",  template = 'plotly_dark')\n",
+							"fig.show ()"
+						],
+						"outputs": [],
+						"execution_count": 47
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:50.951015Z",
+								"iopub.status.busy": "2021-10-10T08:47:50.950164Z",
+								"iopub.status.idle": "2021-10-10T08:47:51.015620Z",
+								"shell.execute_reply": "2021-10-10T08:47:51.016027Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:33.266163Z"
+							},
+							"papermill": {
+								"duration": 0.150013,
+								"end_time": "2021-10-10T08:47:51.016169",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:50.866156",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"fig = px.histogram (df, x = \"Age\",  facet_row = \"Marital_Status\",  template = 'plotly_dark')\n",
+							"fig.show ()"
+						],
+						"outputs": [],
+						"execution_count": 48
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:51.173457Z",
+								"iopub.status.busy": "2021-10-10T08:47:51.172615Z",
+								"iopub.status.idle": "2021-10-10T08:47:51.239737Z",
+								"shell.execute_reply": "2021-10-10T08:47:51.240142Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:33.351187Z"
+							},
+							"papermill": {
+								"duration": 0.154064,
+								"end_time": "2021-10-10T08:47:51.240301",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:51.086237",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"fig = px.histogram (df, x = \"Income\",  facet_row = \"Marital_Status\",  template = 'plotly_dark')\n",
+							"fig.show ()"
+						],
+						"outputs": [],
+						"execution_count": 49
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"papermill": {
+								"duration": 0.072736,
+								"end_time": "2021-10-10T08:47:51.580010",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:51.507274",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"**35% of the customer are single whereas more 64% are in relationship.**"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:51.732371Z",
+								"iopub.status.busy": "2021-10-10T08:47:51.731504Z",
+								"iopub.status.idle": "2021-10-10T08:47:51.776991Z",
+								"shell.execute_reply": "2021-10-10T08:47:51.777450Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:33.495167Z"
+							},
+							"papermill": {
+								"duration": 0.125252,
+								"end_time": "2021-10-10T08:47:51.777593",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:51.652341",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"fig =  px.pie (df, names = \"Education\", hole = 0.4, template = \"plotly_dark\")\n",
+							"fig.show ()"
+						],
+						"outputs": [],
+						"execution_count": 50
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"papermill": {
+								"duration": 0.072679,
+								"end_time": "2021-10-10T08:47:51.925015",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:51.852336",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"** More than 97% customer are from PG background. and Approx. 2% are from UG."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:52.078366Z",
+								"iopub.status.busy": "2021-10-10T08:47:52.075145Z",
+								"iopub.status.idle": "2021-10-10T08:47:52.377434Z",
+								"shell.execute_reply": "2021-10-10T08:47:52.378301Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:33.550861Z"
+							},
+							"papermill": {
+								"duration": 0.381336,
+								"end_time": "2021-10-10T08:47:52.378538",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:51.997202",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"sns.barplot(x = df['Expenses'],y = df['Education']);\n",
+							"plt.title('Total Expense based on the Education Level');"
+						],
+						"outputs": [],
+						"execution_count": 51
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:52.665343Z",
+								"iopub.status.busy": "2021-10-10T08:47:52.662588Z",
+								"iopub.status.idle": "2021-10-10T08:47:52.960548Z",
+								"shell.execute_reply": "2021-10-10T08:47:52.960104Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:33.804207Z"
+							},
+							"papermill": {
+								"duration": 0.448471,
+								"end_time": "2021-10-10T08:47:52.960670",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:52.512199",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"sns.barplot(x = df['Income'],y = df['Education']);\n",
+							"plt.title('Total Income based on the Education Level');"
+						],
+						"outputs": [],
+						"execution_count": 52
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"execution": {
+								"iopub.execute_input": "2021-10-10T08:47:53.121083Z",
+								"iopub.status.busy": "2021-10-10T08:47:53.120516Z",
+								"iopub.status.idle": "2021-10-10T08:47:53.144994Z",
+								"shell.execute_reply": "2021-10-10T08:47:53.145836Z",
+								"shell.execute_reply.started": "2021-10-10T08:46:34.047438Z"
+							},
+							"papermill": {
+								"duration": 0.109333,
+								"end_time": "2021-10-10T08:47:53.145995",
+								"exception": false,
+								"start_time": "2021-10-10T08:47:53.036662",
+								"status": "completed"
+							},
+							"tags": []
+						},
+						"source": [
+							"df.describe()"
+						],
+						"outputs": [],
+						"execution_count": 53
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Spark1')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 15
+				},
+				"autoScale": {
+					"enabled": true,
+					"maxNodeCount": 10,
+					"minNodeCount": 3
+				},
+				"nodeCount": 10,
+				"nodeSize": "Small",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.3",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "eastus"
+		}
+	]
+}
